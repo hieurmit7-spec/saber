@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -12,44 +12,60 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const getEmail = (uname: string) => `${uname.trim().toLowerCase()}@fern.local`;
+  useEffect(() => {
+    // Redirect if already logged in via local storage
+    if (localStorage.getItem('fern_user_id')) {
+      navigate('/');
+    }
+  }, [navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username || !password) return toast.error('Vui lòng nhập tên đăng nhập và mật khẩu');
     
     setLoading(true);
-    const email = getEmail(username);
 
     if (isLogin) {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
+      // Đăng nhập: Tìm trong bảng players
+      const { data, error } = await supabase
+        .from('players')
+        .select('*')
+        .eq('username', username)
+        .eq('password', password)
+        .single();
+        
+      if (error || !data) {
         toast.error('Sai tài khoản hoặc mật khẩu');
       } else {
+        localStorage.setItem('fern_user_id', data.id);
         toast.success('Đăng nhập thành công!');
-        navigate('/');
+        // Refresh page to trigger App.tsx logic
+        window.location.href = '/';
       }
     } else {
-      const { data, error } = await supabase.auth.signUp({ 
-        email, 
-        password,
-        options: {
-          data: { username }
-        }
-      });
-      if (error) {
-        toast.error(error.message);
+      // Đăng ký: Tạo mới trong bảng players
+      // Lưu ý: pass plaintext chỉ để demo, thực tế nên dùng backend hash.
+      const { data: existingUser } = await supabase
+        .from('players')
+        .select('id')
+        .eq('username', username)
+        .single();
+
+      if (existingUser) {
+        toast.error('Tên đăng nhập đã tồn tại!');
       } else {
-        // Automatically insert into players table via edge function or let trigger handle it
-        const { error: insertError } = await supabase.from('players').insert([
-          { id: data.user?.id, username }
-        ]);
+        const { data: newUser, error: insertError } = await supabase
+          .from('players')
+          .insert([{ username, password }])
+          .select()
+          .single();
+
         if (insertError) {
-          toast.error('Lỗi khi tạo hồ sơ người chơi');
-          console.error(insertError);
-        } else {
+          toast.error('Lỗi khi tạo tài khoản');
+        } else if (newUser) {
+          localStorage.setItem('fern_user_id', newUser.id);
           toast.success('Đăng ký thành công!');
-          navigate('/');
+          window.location.href = '/';
         }
       }
     }
