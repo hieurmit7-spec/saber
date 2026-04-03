@@ -1,0 +1,134 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Raleway:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 228 20% 8%;
+    --foreground: 45 30% 90%;
+
+    --card: 228 18% 12%;
+    --card-foreground: 45 30% 90%;
+
+    --popover: 228 18% 12%;
+    --popover-foreground: 45 30% 90%;
+
+    --primary: 45 80% 55%;
+    --primary-foreground: 228 20% 8%;
+
+    --secondary: 220 30% 18%;
+    --secondary-foreground: 45 30% 90%;
+
+    --muted: 220 15% 16%;
+    --muted-foreground: 220 10% 55%;
+
+    --accent: 220 60% 50%;
+    --accent-foreground: 45 30% 95%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 20% 20%;
+    --input: 220 20% 20%;
+    --ring: 45 80% 55%;
+
+    --radius: 0.5rem;
+
+    /* RPG custom tokens */
+    --gold: 45 80% 55%;
+    --gold-bright: 42 90% 65%;
+    --gold-dim: 45 60% 35%;
+    --blue-glow: 210 80% 55%;
+    --blue-deep: 220 60% 25%;
+    --dark-surface: 228 18% 10%;
+    --overlay: 228 20% 6%;
+
+    --font-display: 'Cinzel', serif;
+    --font-body: 'Raleway', sans-serif;
+
+    --sidebar-background: 228 18% 10%;
+    --sidebar-foreground: 45 30% 90%;
+    --sidebar-primary: 45 80% 55%;
+    --sidebar-primary-foreground: 228 20% 8%;
+    --sidebar-accent: 220 30% 18%;
+    --sidebar-accent-foreground: 45 30% 90%;
+    --sidebar-border: 220 20% 20%;
+    --sidebar-ring: 45 80% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+  .font-body {
+    font-family: var(--font-body);
+  }
+  .text-gold {
+    color: hsl(var(--gold));
+  }
+  .text-gold-bright {
+    color: hsl(var(--gold-bright));
+  }
+  .bg-dark-surface {
+    background-color: hsl(var(--dark-surface));
+  }
+  .bg-overlay {
+    background-color: hsl(var(--overlay));
+  }
+  .border-gold {
+    border-color: hsl(var(--gold));
+  }
+  .border-gold-bright {
+    border-color: hsl(var(--gold-bright));
+  }
+  .shadow-gold {
+    box-shadow: 0 0 20px hsl(var(--gold) / 0.3);
+  }
+  .shadow-blue-glow {
+    box-shadow: 0 0 30px hsl(var(--blue-glow) / 0.4);
+  }
+  .gradient-gold {
+    background: linear-gradient(135deg, hsl(var(--gold-dim)), hsl(var(--gold)), hsl(var(--gold-bright)));
+  }
+  .gradient-dark {
+    background: linear-gradient(180deg, hsl(var(--background)), hsl(var(--overlay)));
+  }
+  .video-flip {
+    transform: scaleX(-1);
+  }
+}
+
+/* Battle animations */
+@keyframes floatUp {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  50% { opacity: 1; transform: translateY(-30px) scale(1.2); }
+  100% { opacity: 0; transform: translateY(-60px) scale(0.8); }
+}
+
+@keyframes attackUp {
+  0% { transform: translateY(0); }
+  40% { transform: translateY(-20px) scale(1.15); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes attackDown {
+  0% { transform: translateY(0); }
+  40% { transform: translateY(20px) scale(1.15); }
+  100% { transform: translateY(0) scale(1); }
+}
