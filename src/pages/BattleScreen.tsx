@@ -60,6 +60,7 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
   // PvP Ranked
   const [matchTime, setMatchTime] = useState(0);
   const [selectedOpponent, setSelectedOpponent] = useState<any>(null); // For Async Arena
+  const [rankedStarGain, setRankedStarGain] = useState(0); // +1 or +2 depending on opponent choice
 
   // Init playerTeam from player DB
   useEffect(() => {
@@ -81,9 +82,10 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
     }
   }, [mode]);
 
-  const handleSelectOpponent = (opponent: any) => {
+  const handleSelectOpponent = (opponent: any, isMiddle: boolean) => {
     setSelectedOpponent(opponent);
-    setPhase('prep'); // Optionally they can still view their team before hitting "Sẵn Sàng"
+    setRankedStarGain(isMiddle ? 2 : 1);
+    setPhase('prep');
   };
 
   const handleJoinPrivate = () => {
@@ -244,7 +246,17 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
         })();
         toast.success(`Chiến Thắng PvE! Nhận ${kcReward} KC & 1 Genesis Core.`);
       } else if (mode === 'ranked') {
-        toast.success('Chiến Thắng Xếp Hạng! +1 Sao hạng.');
+        // Save star gain to DB
+        (async () => {
+          const { data } = await (supabase as any).from('players').select('pvp_stars, pvp_rank_level').eq('id', userId).single();
+          if (data) {
+            let newStars = (data.pvp_stars || 0) + rankedStarGain;
+            let newLevel = data.pvp_rank_level || 1;
+            if (newStars >= 5) { newStars -= 5; newLevel += 1; }
+            await (supabase as any).from('players').update({ pvp_stars: newStars, pvp_rank_level: newLevel }).eq('id', userId);
+          }
+        })();
+        toast.success(`Chiến Thắng! +${rankedStarGain} Sao Rank!`);
       } else {
         toast.success('Chiến thắng phòng kín!');
       }
@@ -292,37 +304,34 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
 
     setTimeout(() => {
       // --- Heat / Chakra gain (BOTH player AND enemy) ---
+      // Compute heat OUTSIDE the pure state updater so we can read the result
+      const currentC = combatants.find(c => c.id === currentEntity.id);
+      if (!currentC) {
+        handleDamage(target.id, finalDmg, currentEntity);
+        setActiveAttacker(null);
+        setCurrentTurnIdx(p => (p + 1) % turnOrder.length);
+        return;
+      }
+
+      let newHeat = currentC.heat;
       let pendingUlt: 'saber' | 'sasuke' | null = null;
 
-      setCombatants(prev => {
-        const next = prev.map(c => {
-          if (c.id !== currentEntity.id) return c;
+      if (currentC.baseId === 'sasuke') {
+        newHeat = Math.min(100, currentC.heat + 20);
+        if (!currentC.isEnemy && newHeat >= 100) pendingUlt = 'sasuke';
+      } else if (currentC.baseId === 'saber') {
+        newHeat = Math.min(100, currentC.heat + 15);
+        if (!currentC.isEnemy && newHeat >= 100) pendingUlt = 'saber';
+      }
 
-          // Sasuke: Chidori gains +20 Chakra
-          if (c.baseId === 'sasuke') {
-            const newHeat = Math.min(100, c.heat + 20);
-            // Only trigger ult for player Sasuke
-            if (!c.isEnemy && newHeat >= 100) pendingUlt = 'sasuke';
-            return { ...c, heat: newHeat };
-          }
-
-          // Saber: gains heat on attack
-          if (c.baseId === 'saber') {
-            const newHeat = Math.min(100, c.heat + 15);
-            // Only trigger ult for player Saber
-            if (!c.isEnemy && newHeat >= 100) pendingUlt = 'saber';
-            return { ...c, heat: newHeat };
-          }
-
-          return c;
-        });
-        return next;
-      });
+      // Now apply to state
+      if (currentC.baseId === 'sasuke' || currentC.baseId === 'saber') {
+        setCombatants(prev => prev.map(c => c.id === currentEntity.id ? { ...c, heat: newHeat } : c));
+      }
 
       handleDamage(target.id, finalDmg, currentEntity);
       setActiveAttacker(null);
 
-      // Trigger ultimate AFTER state is set, with a tiny delay so React flushes
       if (pendingUlt) {
         setTimeout(() => {
           setActiveUltCharacter(pendingUlt!);
@@ -526,8 +535,9 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
                 const isMiddle = idx === 1;
                 return (
                   <div key={opp.id} className={`relative flex flex-col items-center bg-zinc-950/80 border backdrop-blur-md p-6 transition-all ${isMiddle ? 'border-amber-500 shadow-[0_0_30px_rgba(245,158,11,0.2)] scale-110 -translate-y-4' : 'border-white/10 hover:border-red-500 mt-4'}`}>
-                    {isMiddle && <div className="absolute -top-3 bg-amber-500 text-black font-black text-[10px] px-3 py-0.5 uppercase tracking-widest">Kẻ Thù Truyền Kiếp</div>}
-                    
+                    {isMiddle && <div className="absolute -top-3 bg-amber-500 text-black font-black text-[10px] px-3 py-0.5 uppercase tracking-widest">Kẻ Thù Truyền Kiếp · +2 Sao</div>}
+                    {!isMiddle && <div className="absolute -top-3 bg-zinc-700 text-zinc-200 font-black text-[10px] px-3 py-0.5 uppercase tracking-widest">+1 Sao</div>}
+
                     {/* Avatar with frame */}
                     {(() => {
                       const frameStyle = {
@@ -558,7 +568,7 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
 
                     <Button 
                       className={`w-full font-bold uppercase tracking-widest ${isMiddle ? 'bg-amber-600 hover:bg-amber-500 text-white' : 'bg-red-600 hover:bg-red-500 text-white'}`}
-                      onClick={() => handleSelectOpponent(opp)}
+                      onClick={() => handleSelectOpponent(opp, isMiddle)}
                     >
                       Nghiền Nát
                     </Button>
@@ -579,6 +589,28 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
         <div className="absolute top-4 left-4 z-20 flex gap-4">
           <Button variant="ghost" onClick={() => navigate('/battle')}><ChevronLeft /> Rút Lui</Button>
           {phase === 'combat' && <Button variant="outline" className="bg-black/50" onClick={() => setSpeedMult(m => m === 1 ? 3 : 1)}><FastForward /> x{speedMult}</Button>}
+        </div>
+      )}
+
+      {/* Rank HUD — top center, only in ranked mode during combat */}
+      {mode === 'ranked' && phase === 'combat' && !isCastingUlt && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center bg-black/60 backdrop-blur-sm border border-amber-500/20 rounded-xl px-6 py-2">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-amber-500/70 mb-1">Level {player?.pvp_rank_level || 1}</div>
+          <div className="flex gap-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <span
+                key={i}
+                className={`text-xl transition-all ${
+                  i < (player?.pvp_stars || 0)
+                    ? 'text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.8)]'
+                    : 'text-zinc-700'
+                }`}
+              >
+                ★
+              </span>
+            ))}
+          </div>
+          <div className="text-[9px] text-zinc-500 mt-1 uppercase tracking-widest">+{rankedStarGain} Sao nếu thắng</div>
         </div>
       )}
 
