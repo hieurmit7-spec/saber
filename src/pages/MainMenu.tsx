@@ -1,74 +1,80 @@
 import { useNavigate } from "react-router-dom";
-import { useGameStore } from "@/stores/gameStore";
 import { Button } from "@/components/ui/button";
-import { Calendar, Backpack, Star } from "lucide-react";
+import { usePlayer } from "@/hooks/usePlayerData";
 
 export default function MainMenu() {
   const navigate = useNavigate();
+  const userId = localStorage.getItem('fern_user_id') || '';
+  const { data: player, isLoading } = usePlayer(userId);
+
+  if (isLoading) return <div className="w-full h-screen bg-black flex items-center justify-center text-white">Loading...</div>;
 
   return (
-    <div className="w-full h-screen overflow-hidden relative bg-black font-sans">
-      {/* Background Video Flipped */}
+    <div className="w-full h-screen overflow-hidden relative bg-black font-sans text-white">
+      {/* Background Video */}
       <video
         autoPlay
         loop
         muted
         playsInline
-        className="absolute w-full h-full object-cover z-0"
+        className="absolute w-full h-full object-cover z-0 opacity-80"
         style={{ transform: "scaleX(-1)" }}
       >
         <source src="/videos/spring-bg.mp4" type="video/mp4" />
       </video>
 
-      {/* Top UI */}
-      <div className="absolute top-0 left-0 w-full p-4 flex justify-between z-10 pointer-events-none">
+      {/* Top Banner UI */}
+      <div className="absolute top-0 left-0 w-full p-8 flex justify-between items-start z-10 pointer-events-none">
         
-        {/* Top Left: Quest Tracker */}
-        <div className="space-y-4 pointer-events-auto">
-          <div className="bg-black/60 backdrop-blur-md p-3 rounded-lg border border-white/10 max-w-xs shadow-lg">
-            <h3 className="text-amber-400 font-bold mb-1 flex items-center gap-1">
-              <Star className="w-4 h-4" /> Main Quest
-            </h3>
-            <p className="text-zinc-200 text-sm">Defeat 3 enemies in PvE</p>
-            <div className="w-full bg-zinc-800 h-1.5 mt-2 rounded-full overflow-hidden">
-              <div className="bg-amber-500 w-1/3 h-full" />
-            </div>
-          </div>
+        <div className="flex flex-col gap-2 pointer-events-auto">
+          <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500 uppercase tracking-widest drop-shadow-2xl">
+            Fern
+          </h1>
+          <p className="text-amber-100/50 text-sm tracking-widest">SABER'S LEGACY</p>
         </div>
 
-        <div className="flex gap-4 pointer-events-auto items-start">
-          <Button variant="ghost" className="bg-black/50 text-white hover:bg-black/80 border border-white/10 shrink-0">
-            <Calendar className="w-5 h-5" />
-          </Button>
-          <Button onClick={() => navigate('/bag')} variant="ghost" className="bg-black/50 text-white hover:bg-black/80 border border-white/10 shrink-0">
-            <Backpack className="w-5 h-5" />
-          </Button>
+        <div className="flex gap-6 pointer-events-auto items-center">
+          <div className="flex bg-black/40 backdrop-blur-md rounded-full px-4 py-2 border border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
+            <span className="font-bold text-amber-400 mr-2">KC:</span>
+            <span>{player?.kc_balance?.toLocaleString() || 0}</span>
+          </div>
         </div>
       </div>
 
-      {/* Bottom Main Navigation */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-6 z-10">
-        <Button 
-          size="lg" 
+      {/* Main Navigation (Assymetric Modern Design) */}
+      <div className="absolute bottom-16 right-16 flex flex-col gap-4 z-10 w-80">
+        <h2 className="text-zinc-500 text-sm uppercase tracking-widest mb-2 border-b border-white/10 pb-2">Hệ Thống Trạm</h2>
+        
+        <button 
           onClick={() => navigate('/character')}
-          className="h-16 px-8 rounded-full bg-gradient-to-t from-zinc-900 to-zinc-700 border-2 border-zinc-600 text-xl font-bold shadow-2xl hover:scale-105 transition-transform"
+          className="group relative h-20 bg-zinc-950/80 backdrop-blur border border-white/5 hover:border-amber-500/50 overflow-hidden flex items-center px-6 transition-all ring-1 ring-white/5 hover:bg-black"
         >
-          Character
-        </Button>
-        <Button 
-          size="lg" 
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1s_infinite]"></div>
+          <span className="text-left font-black text-2xl uppercase tracking-wider text-white/80 group-hover:text-amber-400 transition-colors">Character</span>
+        </button>
+        
+        <button 
           onClick={() => navigate('/battle')}
-          className="h-16 px-8 rounded-full bg-gradient-to-t from-red-900 to-red-600 border-2 border-red-500 text-xl font-bold shadow-[0_0_20px_rgba(220,38,38,0.4)] hover:scale-105 transition-transform"
+          className="group relative h-20 bg-zinc-950/80 backdrop-blur border border-white/5 hover:border-red-500/50 overflow-hidden flex items-center px-6 transition-all ring-1 ring-white/5 hover:bg-black"
         >
-          Battle
-        </Button>
-        <Button 
-          size="lg" 
+          <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-red-600 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
+          <span className="text-left font-black text-2xl uppercase tracking-wider text-white/80 group-hover:text-red-400 transition-colors">Battle Zone</span>
+        </button>
+
+        <button 
           onClick={() => navigate('/gacha')}
-          className="h-16 px-8 rounded-full bg-gradient-to-t from-amber-900 to-amber-600 border-2 border-amber-500 text-xl font-bold shadow-[0_0_20px_rgba(217,119,6,0.4)] hover:scale-105 transition-transform"
+          className="group relative h-20 bg-zinc-950/80 backdrop-blur border border-white/5 hover:border-purple-500/50 overflow-hidden flex items-center px-6 transition-all ring-1 ring-white/5 hover:bg-black"
         >
-          Gacha
-        </Button>
+          <span className="text-left font-black text-2xl uppercase tracking-wider text-white/80 group-hover:text-purple-400 transition-colors">Gacha</span>
+        </button>
+        
+        <button 
+          onClick={() => navigate('/bag')}
+          className="group relative h-14 mt-4 bg-transparent border border-white/20 hover:bg-white/10 overflow-hidden flex items-center justify-center transition-all"
+        >
+          <span className="text-sm font-bold uppercase tracking-widest text-zinc-400 group-hover:text-white">Thùng Đồ Toàn Cầu</span>
+        </button>
+
       </div>
     </div>
   );

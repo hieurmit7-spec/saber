@@ -1,231 +1,277 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, BrainCircuit, Star, ArrowUpCircle } from "lucide-react";
-import { useGameStore, getCharacterTotalStats } from "@/stores/gameStore";
-import { Input } from "@/components/ui/input";
+import { ChevronLeft, Star } from "lucide-react";
+import { useHydratedCharacters, useInventory, useEquipItem, useUpgradeStar } from "@/hooks/usePlayerData";
+import { getCharacterTotalStats, calculateCP } from "@/stores/gameStore";
 import { toast } from "sonner";
 
 export default function CharacterScreen() {
   const navigate = useNavigate();
-  const { characters, upgradeStars, inventory, equipItem, unequipItem } = useGameStore();
+  const userId = localStorage.getItem('fern_user_id') || '';
   
-  // Use state or derived data
-  const saber = characters.find((c) => c.id === 'saber') || characters[0];
-  const maxWords = Math.min(4, Math.floor(saber.stars / 2) + 1); // 0-1 star = 1 word, 2-3 = 2, 4 = 3, 5-6 = 4. Wait, the prompt says: 0*: 1 word, 1*: 2 words, 3*: 3 words, 5*: 4 words. Let's make it simpler.
-  const wordLimit = saber.stars === 0 ? 1 : saber.stars <= 2 ? 2 : saber.stars <= 4 ? 3 : 4; 
+  const { data: inventory, isLoading: invLoading } = useInventory(userId);
+  const { characters: FULL_CHARACTERS, isLoading: charsLoading } = useHydratedCharacters(userId);
+  const { mutate: equipItem } = useEquipItem(userId);
+  const { mutate: upgradeStar } = useUpgradeStar(userId);
 
-  const totalStats = getCharacterTotalStats(saber);
+  const [selectedCharId, setSelectedCharId] = useState('saber');
+  const [showEquipSelect, setShowEquipSelect] = useState<{ charId: string; slot: string } | null>(null);
 
-  const [showAIModal, setShowAIModal] = useState(false);
-  const [aiPrompt, setAiPrompt] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
-  
-  // Modal chọn trang bị
-  const [equipSlot, setEquipSlot] = useState<any>(null);
+  const activeChar = FULL_CHARACTERS.find(c => c.id === selectedCharId);
 
-  const nextCost = { 1: 20, 2: 40, 3: 50, 4: 80, 5: 100 }[saber.stars as 1|2|3|4|5] || null;
+  if (charsLoading || invLoading) return <div className="w-full h-screen bg-black flex items-center justify-center text-white">Loading Archive...</div>;
 
-  const handleUpgradeStar = () => {
-    if (!nextCost) return toast.info("Đã đạt mốc tối đa 6 Sao!");
-    if (saber.shards < nextCost) return toast.error(`Không đủ mảnh (Cần ${nextCost}, đang có ${saber.shards})`);
-    upgradeStars(saber.id);
-    toast.success(`Nâng cấp thành công lên ${saber.stars + 1} Sao!`);
+  const handleEquip = (eqId: string | null) => {
+    if (!showEquipSelect) return;
+    equipItem({ characterId: showEquipSelect.charId, slot: showEquipSelect.slot, equipmentId: eqId });
+    setShowEquipSelect(null);
   };
 
-  const mockAIGenesis = async (input: string) => {
-    setIsGenerating(true);
-    
-    // Simulate delay
-    await new Promise(r => setTimeout(r, 1500));
-
-    const text = input.toLowerCase();
-    let dmgMulti = 200;
-    let heal = 0;
-    let effect = 'none';
-    let aoe = false;
-
-    if (text.includes('fire') || text.includes('burn')) { effect = 'burn'; dmgMulti += 100; }
-    if (text.includes('stun') || text.includes('freeze')) { effect = 'stun'; dmgMulti -= 50; }
-    if (text.includes('heal') || text.includes('life')) { heal = 20; dmgMulti -= 100; }
-    if (text.includes('all') || text.includes('aoe')) { aoe = true; dmgMulti -= 50; }
-    if (text.includes('god') || text.includes('kill')) { dmgMulti += 300; heal = 0; } // limit overall power
-    
-    dmgMulti = Math.max(0, Math.min(600, dmgMulti)); // clamp 0-600
-
-    const skillJson = {
-      skillName: input || "Genesis Strike",
-      damageMultiplier: dmgMulti,
-      healPercentage: heal,
-      statusEffect: effect,
-      aoe: aoe
-    };
-
-    // Save to character state
-    const currentChars = useGameStore.getState().characters;
-    useGameStore.setState({
-      characters: currentChars.map(c => 
-        c.id === 'saber' ? { ...c, custom_skill_3: skillJson } : c
-      )
-    });
-
-    toast.success(`Đã học kỹ năng: ${input}!`);
-    setShowAIModal(false);
-    setAiPrompt("");
-    setIsGenerating(false);
+  const SHARD_REQUIREMENTS: Record<number, number> = {
+    2: 20, 3: 40, 4: 50, 5: 80, 6: 100
   };
 
-  const generateAHSkill = () => {
-    if (!aiPrompt) return toast.error("Vui lòng nhập từ khóa.");
-    const currentWords = aiPrompt.trim().split(/\s+/).length;
-    if (currentWords > wordLimit) return toast.error(`Max ${wordLimit} từ cho cấp sao hiện tại.`);
-    
-    mockAIGenesis(aiPrompt);
+  const handleUpgrade = () => {
+    if (!activeChar || !activeChar.isUnlocked) return;
+    if (activeChar.stars >= 6) return;
+    const required = SHARD_REQUIREMENTS[activeChar.stars + 1];
+    if (activeChar.shards >= required) {
+      upgradeStar({ 
+        characterId: activeChar.id, 
+        newStar: activeChar.stars + 1, 
+        remainShards: activeChar.shards - required 
+      });
+    } else {
+      toast.error('Không đủ mảnh để nâng cấp!');
+    }
   };
 
-  const handleEquipSlot = (slot: string) => {
-    setEquipSlot(slot);
-  };
+  if (!activeChar) return null;
 
-  const equipFromInventory = (item: any) => {
-    equipItem(saber.id, equipSlot as any, item);
-    setEquipSlot(null);
-  };
+  const totalStats = activeChar.isUnlocked ? getCharacterTotalStats(activeChar as any) : activeChar.baseStats;
+  const cp = activeChar.isUnlocked ? calculateCP(activeChar as any) : 0;
+  const isSaber = activeChar.id === 'saber';
+  const showUpgradeReq = activeChar.stars < 6;
+  const reqShards = activeChar.stars < 6 ? SHARD_REQUIREMENTS[activeChar.stars + 1] : 0;
 
   return (
-    <div className="w-full h-screen overflow-hidden relative bg-black font-sans text-white">
-      {/* Background */}
-      <video autoPlay loop muted playsInline className="absolute w-full h-full object-cover z-0 opacity-80">
-        <source src="/videos/banner-ulti.mp4" type="video/mp4" />
-      </video>
-
-      {/* Top Header - Using higher z-index and flex */}
-      <div className="absolute top-0 left-0 w-full p-6 z-30 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
-        <Button variant="ghost" onClick={() => navigate('/')} className="text-white hover:bg-white/20 pointer-events-auto">
-          <ChevronLeft className="mr-2 w-6 h-6" /> Back to Main Menu
-        </Button>
+    <div className="w-full h-screen bg-black text-white relative font-sans overflow-hidden">
+      {/* Background Graphic */}
+      <div className="absolute inset-0 z-0 opacity-40">
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-black z-10" />
+        <div className="absolute w-full h-full bg-[url('https://c4.wallpaperflare.com/wallpaper/500/442/354/outrun-vaporwave-hd-wallpaper-preview.jpg')] bg-cover bg-center mix-blend-overlay opacity-30 grayscale" />
       </div>
 
-      {/* Main Content Layout */}
-      <div className="absolute inset-0 pt-24 pb-8 px-8 z-10 flex pointer-events-none">
-        
-        {/* Left Panel */}
-        <div className="w-[450px] flex flex-col gap-6 bg-black/70 backdrop-blur-md p-6 rounded-2xl border border-white/10 shrink-0 pointer-events-auto overflow-y-auto">
-          
-          <div className="flex items-center gap-4">
-            <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-amber-500 shrink-0">
-              <img src="/videos/saber-avatar.gif" className="w-full h-full object-cover" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-3xl font-black text-amber-400">{saber.name}</h2>
-              <div className="flex text-yellow-500 text-lg">
-                {"★".repeat(saber.stars)}{"☆".repeat(6 - saber.stars)}
+      <div className="absolute top-0 left-0 w-full p-8 z-20 flex justify-between">
+        <button onClick={() => navigate('/')} className="text-zinc-500 hover:text-white uppercase tracking-widest text-xs font-bold transition-colors flex items-center">
+          <ChevronLeft className="w-4 h-4 mr-2" /> Trở Về
+        </button>
+      </div>
+
+      <div className="flex h-full relative z-10 p-16 pb-8 pt-24 gap-12 max-w-7xl mx-auto">
+        {/* Left Column: List */}
+        <div className="w-64 flex flex-col gap-4 border-r border-white/10 pr-8">
+          <h2 className="text-xs text-zinc-500 uppercase tracking-widest font-bold border-b border-white/5 pb-2">Danh sách</h2>
+          {FULL_CHARACTERS.map(c => (
+            <button 
+              key={c.id} 
+              onClick={() => setSelectedCharId(c.id)}
+              className={`text-left text-sm uppercase tracking-wider py-3 border-l-2 transition-all ${selectedCharId === c.id ? 'border-amber-500 text-white pl-4' : 'border-transparent text-zinc-500 pl-2 hover:pl-4 hover:text-zinc-300'}`}
+            >
+              {c.name} {!c.isUnlocked && '(Chưa có)'}
+            </button>
+          ))}
+        </div>
+
+        {/* Center: Visual & Equipment */}
+        <div className="flex-1 flex flex-col items-center relative">
+          <div className="absolute top-0 flex flex-col items-center">
+            <h1 className="text-7xl font-black text-white uppercase tracking-widest drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+              {activeChar.name}
+            </h1>
+            <p className="text-amber-500 tracking-[0.4em] text-sm uppercase mt-2">Chiến lực: {cp.toLocaleString()}</p>
+          </div>
+
+          <div className="w-[400px] h-[500px] mt-24 relative flex items-center justify-center pointer-events-none">
+            {isSaber ? (
+              <img src="/videos/saber-avatar.gif" className="h-full object-cover mix-blend-screen opacity-90 filter contrast-125 rounded-3xl" />
+            ) : (
+              <div className="text-zinc-700 text-6xl font-black uppercase blur-[2px]">{activeChar.name}</div>
+            )}
+          </div>
+
+          {/* Equipment Slots Around Character */}
+          {activeChar.isUnlocked && (
+            <div className="absolute top-48 w-[600px] flex justify-between pointer-events-none">
+              <div className="flex flex-col gap-12 pointer-events-auto">
+                <EquipSlot 
+                  label="Vũ khí" 
+                  item={activeChar.equipment.artifact} 
+                  onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'artifact' })} 
+                />
+                <EquipSlot 
+                  label="Phụ kiện" 
+                  item={activeChar.equipment.ring} 
+                  onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'ring' })} 
+                />
+                <EquipSlot 
+                  label="Thắt Lưng" 
+                  item={activeChar.equipment.belt} 
+                  onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'belt' })} 
+                />
               </div>
-              <div className="text-sm text-zinc-400 mt-1">Shards: {saber.shards}/{nextCost || 'MAX'}</div>
+              <div className="flex flex-col gap-12 pointer-events-auto items-end">
+                <EquipSlot 
+                  label="Mũ" 
+                  item={activeChar.equipment.hat} 
+                  onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'hat' })} 
+                />
+                <EquipSlot 
+                  label="Áo Giáp" 
+                  item={activeChar.equipment.armor} 
+                  onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'armor' })} 
+                />
+                <EquipSlot 
+                  label="Giày" 
+                  item={activeChar.equipment.shoes} 
+                  onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'shoes' })} 
+                />
+              </div>
             </div>
-            <Button size="icon" variant="outline" className="bg-amber-600/20 border-amber-500/50 hover:bg-amber-600/50 text-amber-400" onClick={handleUpgradeStar}>
-              <ArrowUpCircle />
-            </Button>
-          </div>
+          )}
+        </div>
 
-          {/* Stats */}
-          <div className="bg-white/5 rounded-lg p-4 space-y-2 border border-white/5">
-            <div className="flex justify-between"><span className="text-zinc-400">HP</span><span className="font-bold text-green-400">{totalStats.hp}</span></div>
-            <div className="flex justify-between"><span className="text-zinc-400">Speed</span><span className="font-bold text-blue-400">{totalStats.speed}</span></div>
-            <div className="flex justify-between"><span className="text-zinc-400">Armor</span><span className="font-bold text-purple-400">{totalStats.armor}</span></div>
-            <div className="flex justify-between"><span className="text-zinc-400">DMG</span><span className="font-bold text-red-400">{totalStats.dmg}</span></div>
-            
-            <div className="mt-4 pt-4 border-t border-white/10">
-              <span className="text-zinc-400 block text-xs mb-1">MOCK AI SKILL (SKILL 3)</span>
-              <span className="font-bold text-amber-400">{(saber as any).custom_skill_3?.skillName || "Chưa có kỹ năng"}</span>
-              {(saber as any).custom_skill_3 && (
-                <div className="text-xs text-zinc-400 mt-1">
-                  DMG: {(saber as any).custom_skill_3.damageMultiplier}% | HEAL: {(saber as any).custom_skill_3.healPercentage}% | AOE: {(saber as any).custom_skill_3.aoe ? 'Yes' : 'No'}
-                </div>
-              )}
+        {/* Right Column: Stats & Upgrade */}
+        <div className="w-80 flex flex-col gap-8 ml-8">
+          <div className="bg-zinc-950/50 backdrop-blur-md border border-white/10 p-6 flex items-center justify-between">
+            <div className="flex">
+              {Array.from({length: 6}).map((_, i) => (
+                <Star key={i} className={`w-5 h-5 ${i < activeChar.stars ? 'text-amber-500 fill-amber-500' : 'text-zinc-800'}`} />
+              ))}
             </div>
-          </div>
-
-          {/* 6-slot Equipment Grid */}
-          <div>
-            <h3 className="text-sm text-zinc-400 mb-2 uppercase tracking-wide">Equipment</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {(['shoes', 'hat', 'armor', 'ring', 'belt', 'artifact'] as const).map((slot) => {
-                const item = saber.equipment?.[slot];
-                return (
-                  <div key={slot} onClick={() => handleEquipSlot(slot)} className="bg-zinc-900 border border-white/20 h-16 rounded-lg flex items-center justify-center cursor-pointer hover:bg-white/10 relative">
-                    {item ? (
-                      <div className="flex flex-col items-center">
-                        <span className={`text-xs font-bold text-${item.rarity === 'gold' ? 'amber' : item.rarity === 'purple' ? 'purple' : 'white'}-500`}>{item.name}</span>
-                        <Button size="sm" variant="ghost" className="absolute top-0 right-0 h-4 w-4 p-0 text-red-500" onClick={(e) => { e.stopPropagation(); unequipItem(saber.id, slot); }}>x</Button>
-                      </div>
-                    ) : (
-                      <span className="text-white/30 text-xs capitalize">{slot}</span>
-                    )}
-                  </div>
-                );
-              })}
+            <div className="text-right">
+               <div className="text-xs text-zinc-500 uppercase tracking-widest">Shards</div>
+               <div className="text-lg font-bold">
+                 <span className={activeChar.shards >= reqShards && showUpgradeReq ? "text-green-400" : "text-amber-400"}>{activeChar.shards}</span>
+                 {showUpgradeReq ? ` / ${reqShards}` : ' / MAX'}
+               </div>
             </div>
           </div>
 
-          <Button onClick={() => setShowAIModal(true)} className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 py-6 text-lg border border-purple-400/50 shadow-[0_0_20px_rgba(147,51,234,0.3)]">
-            <BrainCircuit className="w-5 h-5 mr-2" /> AI Genesis Ultimate
-          </Button>
+          <button 
+            disabled={!showUpgradeReq || activeChar.shards < reqShards || !activeChar.isUnlocked}
+            onClick={handleUpgrade}
+            className="w-full bg-transparent border border-amber-500 hover:bg-amber-500/10 text-amber-500 font-bold uppercase tracking-widest py-4 text-sm transition-colors disabled:opacity-20 disabled:cursor-not-allowed disabled:border-zinc-700 disabled:text-zinc-600"
+          >
+            Nâng Cấp Sao
+          </button>
+          
+          <button 
+            onClick={() => navigate('/abilities')}
+            className="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold uppercase tracking-widest py-3 text-xs transition-colors"
+          >
+            Thông Tin Data
+          </button>
 
-          <Button onClick={() => navigate('/abilities')} variant="outline" className="w-full border-blue-500/50 text-blue-400 hover:bg-blue-500/20 py-6 text-lg">
-            Xem Bộ Kỹ Năng (Abilities)
-          </Button>
+          <div className="flex flex-col gap-3 mt-4">
+            <h3 className="text-xs text-zinc-500 uppercase tracking-widest border-b border-white/5 pb-2 mb-2">Thông Số Cốt Lõi</h3>
+            <StatRow label="Điểm Sinh Mệnh" val={totalStats.hp} base={activeChar.baseStats.hp} />
+            <StatRow label="Tốc Độ Di Chuyển" val={totalStats.speed} base={activeChar.baseStats.speed} />
+            <StatRow label="Phòng Ngự" val={totalStats.armor} base={activeChar.baseStats.armor} />
+            <StatRow label="Sát Thương" val={totalStats.dmg} base={activeChar.baseStats.dmg} />
+          </div>
         </div>
       </div>
 
-      {/* Equipment Select Modal */}
-      {equipSlot && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 pointer-events-auto">
-          <div className="bg-zinc-900 p-8 rounded-2xl w-[600px] h-[500px] flex flex-col">
-            <h2 className="text-xl mb-4 font-bold">Chọn Trang Bị: {equipSlot}</h2>
-            <div className="flex-1 overflow-y-auto grid grid-cols-2 gap-4 auto-rows-max">
-              {inventory.filter(e => e.type === equipSlot).length === 0 ? (
-                <div className="col-span-2 text-center text-zinc-500 mt-10">Túi trống</div>
-              ) : (
-                inventory.filter(e => e.type === equipSlot).map(item => (
-                  <div key={item.id} onClick={() => equipFromInventory(item)} className="p-3 border border-zinc-700 bg-black rounded-lg cursor-pointer hover:border-amber-500">
-                    <div className="font-bold">{item.name}</div>
-                    <div className="text-xs text-green-400">DMG: {item.stats.dmg} | HP: {item.stats.hp}</div>
-                  </div>
-                ))
-              )}
-            </div>
-            <Button className="mt-4" onClick={() => setEquipSlot(null)}>Đóng</Button>
-          </div>
-        </div>
-      )}
-
-      {/* AI Genesis Modal */}
-      {showAIModal && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm pointer-events-auto">
-          <div className="bg-zinc-900 border border-purple-500/50 p-8 rounded-2xl max-w-md w-full shadow-2xl relative">
-            <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 mb-2">
-              Genesis Core
-            </h2>
-            <p className="text-zinc-400 text-sm mb-6">
-              Sử dụng 1 Genesis Core. Giới hạn hiện tại: {wordLimit} từ.
-            </p>
-            <Input 
-              value={aiPrompt}
-              onChange={(e) => setAiPrompt(e.target.value)}
-              placeholder="VD: Fire Heal"
-              className="bg-black/50 border-purple-500/30 text-white mb-6 py-6 text-lg"
-              autoFocus
-            />
-            <div className="flex gap-4">
-              <Button variant="outline" onClick={() => setShowAIModal(false)} className="flex-1 hover:bg-white/10 text-black">Hủy</Button>
-              <Button disabled={isGenerating} onClick={generateAHSkill} className="flex-1 bg-purple-600 hover:bg-purple-500 text-white">
-                {isGenerating ? "Hệ thống đang dịch..." : "Khai Sáng"}
-              </Button>
-            </div>
-          </div>
+      {/* Equipment Selector Dialog */}
+      {showEquipSelect && (
+        <div className="absolute inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-50 animate-in fade-in">
+           <div className="w-[600px] bg-zinc-950 border border-white/10 p-8 shadow-2xl">
+             <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-4">
+               <h3 className="text-xl font-bold uppercase tracking-widest">KHO LƯU TRỮ VẬT PHẨM</h3>
+               <button className="text-zinc-500 hover:text-white uppercase tracking-widest text-xs" onClick={() => setShowEquipSelect(null)}>ĐÓNG</button>
+             </div>
+             <div className="grid grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                {inventory.filter((eq: any) => eq.type === showEquipSelect.slot && 
+                  // Lọc những món đồ chưa được ai gắn (Hoặc đang được thằng này gắn)
+                  !FULL_CHARACTERS.some((c: any) => c.isUnlocked && c.id !== showEquipSelect.charId && [c.equipment.shoes?.id, c.equipment.hat?.id, c.equipment.armor?.id, c.equipment.ring?.id, c.equipment.belt?.id, c.equipment.artifact?.id].includes(eq.id))
+                ).length === 0 && (
+                  <div className="col-span-2 text-center py-12 text-zinc-600 tracking-widest uppercase text-sm">Không tìm thấy vật phẩm tương thích</div>
+                )}
+                {inventory.filter((eq: any) => eq.type === showEquipSelect.slot && 
+                  !FULL_CHARACTERS.some((c: any) => c.isUnlocked && c.id !== showEquipSelect.charId && [c.equipment.shoes?.id, c.equipment.hat?.id, c.equipment.armor?.id, c.equipment.ring?.id, c.equipment.belt?.id, c.equipment.artifact?.id].includes(eq.id))
+                ).map((eq: any) => {
+                  const isEquippedByMe = FULL_CHARACTERS.find((c: any) => c.id === showEquipSelect.charId)?.equipment[eq.type]?.id === eq.id;
+                  return (
+                    <button 
+                      key={eq.id} 
+                      onClick={() => handleEquip(eq.id)}
+                      className={`text-left p-4 bg-zinc-900 border transition-colors hover:bg-zinc-800 ${isEquippedByMe ? 'border-amber-500' : 'border-white/5 hover:border-white/20'}`}
+                    >
+                      <div className="flex justify-between mb-2">
+                        <span className={`text-xs font-bold uppercase ${
+                          eq.rarity === 'rainbow' ? 'text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-green-500 to-blue-500' :
+                          eq.rarity === 'red' ? 'text-red-500' :
+                          eq.rarity === 'gold' ? 'text-amber-500' :
+                          eq.rarity === 'purple' ? 'text-purple-500' : 'text-blue-500'
+                        }`}>{eq.name}</span>
+                        {isEquippedByMe && <span className="text-[10px] text-amber-500 tracking-widest uppercase">Equipped</span>}
+                      </div>
+                      <div className="text-zinc-400 text-xs flex gap-3">
+                        {eq.stats.hp > 0 && <span className="text-green-400">+{eq.stats.hp} HP</span>}
+                        {eq.stats.dmg > 0 && <span className="text-red-400">+{eq.stats.dmg} Dmg</span>}
+                      </div>
+                    </button>
+                  );
+                })}
+             </div>
+             <button onClick={() => handleEquip(null)} className="w-full mt-6 py-4 block bg-red-950/30 text-red-500 uppercase tracking-widest text-xs font-bold border border-red-500/20 hover:bg-red-500/20 transition-colors">
+               Gỡ bỏ trang bị
+             </button>
+           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function StatRow({ label, val, base }: { label: string, val: number, base: number }) {
+  const bonus = val - base;
+  return (
+    <div className="flex justify-between items-end border-b border-white/5 pb-1">
+      <span className="text-zinc-400 text-sm">{label}</span>
+      <div className="text-right">
+        <span className="text-lg font-bold">{val}</span>
+        {bonus > 0 && <span className="text-green-500 text-xs ml-2">+{bonus}</span>}
+      </div>
+    </div>
+  );
+}
+
+function EquipSlot({ label, item, onClick }: { label: string, item: any, onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="flex gap-4 items-center group">
+       <div className={`w-16 h-16 border flex items-center justify-center transition-all ${
+         item 
+          ? (item.rarity === 'rainbow' ? 'border-indigo-400 bg-indigo-950/50 shadow-[0_0_15px_rgba(99,102,241,0.3)]' :
+             item.rarity === 'red' ? 'border-red-500 bg-red-950/50' : 
+             item.rarity === 'gold' ? 'border-amber-500 bg-amber-950/50' : 
+             item.rarity === 'purple' ? 'border-purple-500 bg-purple-950/50' : 
+             'border-blue-500 bg-blue-950/50')
+          : 'border-white/10 bg-black hover:border-white/30'
+       }`}>
+         {item ? (
+           <span className="text-xs uppercase font-black text-white/50">{item.icon}</span>
+         ) : (
+           <span className="text-2xl font-black text-zinc-800">+</span>
+         )}
+       </div>
+       <div className="text-left">
+         <div className="text-[10px] text-zinc-500 tracking-widest uppercase mb-1">{label}</div>
+         <div className="text-sm font-bold truncate max-w-[120px] group-hover:text-amber-400 transition-colors">
+           {item ? item.name : 'Trống'}
+         </div>
+       </div>
+    </button>
   );
 }

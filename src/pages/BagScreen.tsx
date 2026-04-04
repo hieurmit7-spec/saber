@@ -1,79 +1,64 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useGameStore } from "@/stores/gameStore";
 import { ChevronLeft } from "lucide-react";
-import { useState } from "react";
+import { useInventory } from "@/hooks/usePlayerData";
 
 export default function BagScreen() {
   const navigate = useNavigate();
-  const { inventory, characters } = useGameStore();
-  const [tab, setTab] = useState<'shards' | 'equipments'>('equipments');
+  const userId = localStorage.getItem('fern_user_id') || '';
+  const { data: inventory, isLoading } = useInventory(userId);
+  const [filter, setFilter] = useState<'all' | 'shoes' | 'hat' | 'armor' | 'ring' | 'belt' | 'artifact'>('all');
+
+  if (isLoading) return <div className="w-full h-screen bg-black text-white flex items-center justify-center">Loading Bag...</div>;
+
+  const filteredItems = (inventory || []).filter((eq: any) => filter === 'all' || eq.type === filter);
 
   return (
-    <div className="w-full h-screen overflow-hidden relative bg-black font-sans text-white flex flex-col p-8">
-      {/* Top Header */}
-      <div className="flex items-center justify-between pointer-events-auto bg-black pb-4 border-b border-white/10">
-        <Button variant="ghost" onClick={() => navigate('/')} className="text-white hover:bg-white/20">
-          <ChevronLeft className="mr-2 w-6 h-6" /> Back to Main Menu
+    <div className="w-full h-screen bg-black text-white font-sans overflow-hidden py-12 px-8">
+      <div className="flex justify-between items-center mb-8">
+        <Button variant="ghost" onClick={() => navigate('/')} className="hover:bg-white/10 uppercase tracking-widest text-xs font-bold">
+          <ChevronLeft className="w-5 h-5 mr-2" /> Trở Về
         </Button>
-        <h1 className="text-3xl font-bold tracking-widest text-amber-500 uppercase">
-          Inventory (Túi Đồ)
+        <h1 className="text-4xl font-black italic tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-600">
+          GLOBAL INVENTORY
         </h1>
-        <div className="w-32" />
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-4 my-6">
-        <Button 
-          variant={tab === 'equipments' ? 'default' : 'outline'} 
-          onClick={() => setTab('equipments')}
-        >
-          Trang Bị ({inventory.length})
-        </Button>
-        <Button 
-          variant={tab === 'shards' ? 'default' : 'outline'} 
-          onClick={() => setTab('shards')}
-        >
-          Mảnh Tướng
-        </Button>
+      <div className="flex gap-4 mb-8 custom-scrollbar pb-2">
+        {['all', 'shoes', 'hat', 'armor', 'ring', 'belt', 'artifact'].map((f) => (
+          <button 
+            key={f}
+            onClick={() => setFilter(f as any)}
+            className={`px-6 py-2 border text-xs font-bold uppercase tracking-widest transition-colors ${
+              filter === f ? 'bg-amber-500 text-black border-amber-500' : 'border-white/20 text-zinc-400 hover:text-white'
+            }`}
+          >
+            {f === 'all' ? 'Tất cả' : f}
+          </button>
+        ))}
       </div>
 
-      {/* Grid */}
-      <div className="flex-1 overflow-y-auto w-full">
-        <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
-          {tab === 'equipments' && inventory.map((item, i) => (
-            <div key={i} className={`p-4 rounded-lg flex flex-col items-center justify-center border-2 border-zinc-700 bg-zinc-900 shadow-md`}>
-              <div className={`w-12 h-12 rounded-full mb-2 ${
-                  item.rarity === 'rainbow' ? 'bg-gradient-to-r from-red-500 via-green-500 to-blue-500' :
-                  item.rarity === 'red' ? 'bg-red-500' :
-                  item.rarity === 'gold' ? 'bg-amber-500' :
-                  item.rarity === 'purple' ? 'bg-purple-500' :
-                  item.rarity === 'blue' ? 'bg-blue-500' : 'bg-white'
-                }`} />
-              <span className={`text-sm font-bold text-center`}>{item.name}</span>
-              <span className="text-xs text-zinc-400 mt-1 capitalize">{item.rarity}</span>
-              <div className="text-[10px] text-zinc-500 mt-2 text-center">
-                DMG: {item.stats.dmg} | HP: {item.stats.hp}
-              </div>
+      <div className="grid grid-cols-6 gap-4 max-h-[80vh] overflow-y-auto custom-scrollbar pr-4 pb-32">
+        {filteredItems.map((eq: any, i: number) => (
+          <div key={eq.id} className="bg-zinc-950 border border-white/5 p-4 hover:border-white/20 transition-colors animate-in zoom-in group relative" style={{ animationDelay: `${i * 20}ms` }}>
+            <div className={`w-12 h-12 mb-4 shrink-0 rounded-full border border-white/10 ${
+              eq.rarity === 'rainbow' ? 'bg-gradient-to-tr from-red-500 via-emerald-500 to-indigo-500 shadow-[0_0_20px_rgba(255,255,255,0.5)] animate-pulse' :
+              eq.rarity === 'red' ? 'bg-red-600 shadow-[0_0_15px_red]' :
+              eq.rarity === 'gold' ? 'bg-amber-500 shadow-[0_0_15px_orange]' :
+              eq.rarity === 'purple' ? 'bg-purple-600' :
+              eq.rarity === 'blue' ? 'bg-blue-600' : 'bg-zinc-300'
+            }`} />
+            <div className="text-xs font-bold uppercase truncate">{eq.name}</div>
+            <div className="text-[10px] text-zinc-500 mt-1 uppercase tracking-widest">{eq.typeName}</div>
+            <div className="mt-3 text-[10px] flex flex-col gap-1 text-zinc-400">
+              {eq.stats.hp > 0 && <span className="text-green-400">+{eq.stats.hp} HP</span>}
+              {eq.stats.speed > 0 && <span>+{eq.stats.speed} Tốc</span>}
+              {eq.stats.armor > 0 && <span className="text-blue-400">+{eq.stats.armor} Giáp</span>}
+              {eq.stats.dmg > 0 && <span className="text-red-400">+{eq.stats.dmg} Dmg</span>}
             </div>
-          ))}
-
-          {tab === 'shards' && characters.map((c) => (
-            <div key={c.id} className="p-4 rounded-lg flex flex-col items-center border border-zinc-700 bg-zinc-900">
-              <div className="w-12 h-12 rounded bg-zinc-800 mb-2 overflow-hidden border border-amber-500">
-                {c.id === 'saber' && <img src="/videos/saber-avatar.gif" className="w-full h-full object-cover" />}
-              </div>
-              <span className="text-sm font-bold text-amber-500">{c.name} Shards</span>
-              <span className="text-xl font-black mt-1 text-white">{c.shards}/10</span>
-            </div>
-          ))}
-
-          {tab === 'equipments' && inventory.length === 0 && (
-            <div className="col-span-full h-40 flex items-center justify-center text-zinc-500">
-              Chưa có trang bị nào.
-            </div>
-          )}
-        </div>
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -1,13 +1,23 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useGameStore, GachaResult } from "@/stores/gameStore";
 import { ChevronLeft } from "lucide-react";
+import { usePlayer, useRollGacha } from "@/hooks/usePlayerData";
+import { performGachaRolls } from "@/lib/gachaLogic";
+import { toast } from "sonner";
 
 export default function GachaScreen() {
   const navigate = useNavigate();
-  const { currency, rollGacha, pityCounter, gachaResults, clearGachaResults } = useGameStore();
-  const [displayedResults, setDisplayedResults] = useState<GachaResult[]>([]);
+  const userId = localStorage.getItem('fern_user_id') || '';
+  
+  const { data: player } = usePlayer(userId);
+  const { mutate: callGachaRPC } = useRollGacha(userId);
+
+  // Local Pity Counter (Could be synced to DB, but keep local for demo)
+  const [pityCounter, setPityCounter] = useState(0);
+
+  const [gachaResults, setGachaResults] = useState<any[] | null>(null);
+  const [displayedResults, setDisplayedResults] = useState<any[]>([]);
   const [isRevealing, setIsRevealing] = useState(false);
 
   const playSFX = (type: 'roll' | 'gold' | 'rainbow') => {
@@ -35,9 +45,7 @@ export default function GachaScreen() {
         osc.start();
         osc.stop(actx.currentTime + 0.3);
       }
-    } catch(e) {
-      // Ignore if audiocontext fails
-    }
+    } catch(e) {}
   };
 
   useEffect(() => {
@@ -55,7 +63,7 @@ export default function GachaScreen() {
 
         setDisplayedResults(prev => [...prev, currentItem]);
         
-        if (currentItem.type === 'character' || (currentItem.item as any).rarity === 'gold' || (currentItem.item as any).rarity === 'red' || (currentItem.item as any).rarity === 'rainbow') {
+        if (currentItem.type === 'character' || currentItem.item.rarity === 'gold' || currentItem.item.rarity === 'red' || currentItem.item.rarity === 'rainbow') {
           playSFX('rainbow');
         } else {
           playSFX('roll');
@@ -76,69 +84,91 @@ export default function GachaScreen() {
 
   const handleRoll = (count: 1 | 10) => {
     if (isRevealing) return;
-    rollGacha(count);
+    const cost = count * 100;
+    if (!player || player.kc_balance < cost) {
+      toast.error('Không đủ kim cương!');
+      return;
+    }
+
+    const { equipments, shards, results, newPity } = performGachaRolls(count, pityCounter);
+    setPityCounter(newPity);
+    setGachaResults(results);
+
+    // 🔥 XÓA ZUSTAND & ĐẨY THẲNG LÊN SUPABASE RPC 🔥
+    callGachaRPC({
+      cost,
+      equipments,
+      shards
+    });
+  };
+
+  const clearGachaResults = () => {
+    setGachaResults(null);
   };
 
   return (
-    <div className="w-full h-screen overflow-hidden relative bg-black font-sans text-white">
+    <div className="w-full h-screen overflow-hidden relative bg-black font-sans text-white border border-transparent">
       <video autoPlay loop muted playsInline className="absolute w-full h-full object-cover z-0">
         <source src="/videos/banner-ulti.mp4" type="video/mp4" />
       </video>
 
-      <div className="absolute top-0 left-0 w-full p-6 z-10 flex items-center justify-between pointer-events-auto bg-gradient-to-b from-black/80 to-transparent">
-        <Button variant="ghost" onClick={() => navigate('/')} className="text-white hover:bg-white/20">
-          <ChevronLeft className="mr-2 w-6 h-6" /> Back to Main Menu
+      <div className="absolute top-0 left-0 w-full p-8 z-10 flex items-center justify-between pointer-events-auto bg-gradient-to-b from-black/80 to-transparent">
+        <Button variant="ghost" onClick={() => navigate('/')} className="text-white hover:bg-white/20 uppercase tracking-widest text-xs font-bold ring-1 ring-white/10">
+          <ChevronLeft className="mr-2 w-4 h-4" /> TRỞ VỀ TRUNG TÂM
         </Button>
-        <div className="bg-black/50 border border-amber-500/50 px-4 py-2 rounded-full">
-          KC Bẩm sinh: <span className="text-amber-400 font-black">{currency}</span>
+        <div className="bg-black/40 backdrop-blur-md px-6 py-2 border border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.5)] flex items-center gap-2">
+          <span className="text-zinc-500 font-bold text-xs uppercase tracking-widest">Ngân Quỹ Cốt Lõi:</span>
+          <span className="text-amber-400 font-black text-xl">{player?.kc_balance?.toLocaleString() || 0}</span>
         </div>
       </div>
 
-      <div className="absolute top-24 left-1/2 -translate-x-1/2 z-10 text-center">
-        <h1 className="text-6xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-500 to-amber-700 drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] border-b-4 border-amber-500/50 pb-2">
-          SABER BANNER
+      <div className="absolute top-32 left-1/2 -translate-x-1/2 z-10 text-center w-full max-w-4xl">
+        <h1 className="text-7xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-amber-100 via-amber-400 to-amber-700 drop-shadow-2xl">
+          SABER ARCHIVE
         </h1>
-        <p className="mt-2 text-xl font-bold bg-black/60 px-4 py-1 rounded-full inline-block border border-white/10">
-          Pity Counter: <span className="text-amber-400">{pityCounter}/50</span>
+        <p className="mt-4 text-sm font-bold bg-black/40 backdrop-blur-md px-6 py-2 inline-flex border border-white/10 shadow-lg items-center gap-2">
+          PITY RATE: <span className="text-amber-400 text-xl">{pityCounter}/50</span>
         </p>
       </div>
 
-      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex gap-8 z-10">
-        <Button disabled={isRevealing} onClick={() => handleRoll(1)} className="w-48 h-16 text-xl bg-gradient-to-b from-blue-600 to-blue-900 border-2 border-blue-400">
-          Roll x1 (100 KC)
-        </Button>
-        <Button disabled={isRevealing} onClick={() => handleRoll(10)} className="w-48 h-16 text-xl bg-gradient-to-b from-amber-500 to-red-700 border-2 border-amber-300">
-          Roll x10 (1000 KC)
-        </Button>
+      <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex gap-8 z-10">
+        <button disabled={isRevealing} onClick={() => handleRoll(1)} className="group relative w-64 h-20 bg-zinc-950/80 backdrop-blur border border-white/5 hover:border-blue-500/50 overflow-hidden flex flex-col items-center justify-center transition-all ring-1 ring-white/5 disabled:opacity-50 disabled:cursor-not-allowed">
+          <span className="font-black text-2xl uppercase tracking-wider text-blue-400 transition-colors drop-shadow-md">Roll x1</span>
+          <span className="text-sm font-medium text-white/50 tracking-widest">100 KC</span>
+        </button>
+
+        <button disabled={isRevealing} onClick={() => handleRoll(10)} className="group relative w-64 h-20 bg-zinc-950/80 backdrop-blur border border-white/5 hover:border-amber-500/50 overflow-hidden flex flex-col items-center justify-center transition-all ring-1 ring-white/5 disabled:opacity-50 disabled:cursor-not-allowed">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1s_infinite]"></div>
+          <span className="font-black text-2xl uppercase tracking-wider text-amber-500 transition-colors drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]">Roll x10</span>
+          <span className="text-sm font-medium text-white/50 tracking-widest">1000 KC</span>
+        </button>
       </div>
 
       {gachaResults && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md">
-          <div className="w-full max-w-4xl p-8">
-            <h2 className="text-4xl font-black text-center text-amber-500 mb-8 drop-shadow-lg">Gacha Results</h2>
-            <div className="grid grid-cols-5 gap-4">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl">
+          <div className="w-full max-w-5xl p-8">
+            <h2 className="text-5xl font-black text-center text-white mb-12 tracking-widest uppercase origin-bottom animate-in slide-in-from-bottom-5 fade-in duration-700">Protocol Results</h2>
+            <div className="grid grid-cols-5 gap-6">
               {displayedResults.map((res, i) => (
                 res && (
-                  <div key={i} className={`h-36 rounded-lg border-2 flex flex-col items-center justify-center bg-zinc-900 animate-in zoom-in duration-300 ${res.type === 'character' ? 'border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.5)]' : 'border-zinc-500'}`}>
+                  <div key={i} className={`h-40 rounded border flex flex-col items-center justify-center bg-zinc-950/50 backdrop-blur animate-in zoom-in duration-300 ${res.type === 'character' ? 'border-amber-500 shadow-[0_0_30px_rgba(245,158,11,0.2)]' : 'border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.5)]'}`}>
                     {res.type === 'character' ? (
                       <>
-                        <div className="w-12 h-12 mb-2 rounded-full overflow-hidden border-2 border-amber-500">
-                          {res.item.id === 'saber' ? <img src="/videos/saber-avatar.gif" className="w-full h-full object-cover" /> : null}
+                        <div className="w-16 h-16 mb-3 overflow-hidden border border-amber-500/50 p-1 bg-black">
+                          {res.item.id === 'saber' ? <img src="/videos/saber-avatar.gif" className="w-full h-full object-cover blur-[0.5px] saturate-150" /> : null}
                         </div>
-                        <span className="font-bold text-amber-400 text-center leading-tight">Mảnh {res.item.name}</span>
-                        <span className="text-xs text-white/50 mt-1">x10</span>
+                        <span className="font-bold text-amber-500 text-center leading-none text-sm uppercase tracking-wider">{res.item.name}</span>
                       </>
                     ) : (
                       <>
-                        <div className={`w-12 h-12 mb-2 rounded-full border border-white/20 ${
-                          (res.item as any).rarity === 'rainbow' ? 'bg-gradient-to-r from-red-500 via-green-500 to-blue-500 shadow-[0_0_15px_pink]' :
-                          (res.item as any).rarity === 'red' ? 'bg-red-500 shadow-[0_0_10px_red]' :
-                          (res.item as any).rarity === 'gold' ? 'bg-amber-500 shadow-[0_0_10px_orange]' :
-                          (res.item as any).rarity === 'purple' ? 'bg-purple-500' :
-                          (res.item as any).rarity === 'blue' ? 'bg-blue-500' : 'bg-white'
+                        <div className={`w-14 h-14 mb-3 shrink-0 ${
+                          res.item.rarity === 'rainbow' ? 'bg-gradient-to-tr from-red-500 via-emerald-500 to-indigo-500 shadow-[0_0_20px_rgba(255,255,255,0.5)] animate-pulse' :
+                          res.item.rarity === 'red' ? 'bg-red-600 shadow-[0_0_15px_red]' :
+                          res.item.rarity === 'gold' ? 'bg-amber-500 shadow-[0_0_15px_orange]' :
+                          res.item.rarity === 'purple' ? 'bg-purple-600' :
+                          res.item.rarity === 'blue' ? 'bg-blue-600' : 'bg-zinc-300'
                         }`} />
-                        <span className="text-xs font-bold w-full text-center truncate px-1">{(res.item as any).name}</span>
-                        <span className="text-[10px] text-zinc-400 mt-1 uppercase">{(res.item as any).rarity}</span>
+                        <span className="text-xs font-bold text-center px-2 line-clamp-2 leading-tight uppercase tracking-widest text-zinc-300">{res.item.name}</span>
                       </>
                     )}
                   </div>
@@ -146,8 +176,10 @@ export default function GachaScreen() {
               ))}
             </div>
             
-            <div className={`mt-12 text-center transition-opacity duration-300 ${isRevealing ? 'opacity-0' : 'opacity-100'}`}>
-              <Button onClick={clearGachaResults} size="lg" className="w-64 font-bold tracking-widest text-lg">Xác Nhận</Button>
+            <div className={`mt-16 text-center transition-all duration-700 ${isRevealing ? 'opacity-0 translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'}`}>
+              <button onClick={clearGachaResults} className="border border-white/20 bg-transparent text-white px-12 py-4 font-bold tracking-[0.3em] uppercase hover:bg-white/10 transition-colors text-sm">
+                XÁC NHẬN
+              </button>
             </div>
           </div>
         </div>

@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, FastForward, Play, Loader2 } from "lucide-react";
-import { useGameStore, GameCharacter } from "@/stores/gameStore";
+import { ChevronLeft, FastForward, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { useHydratedCharacters } from "@/hooks/usePlayerData";
 
 interface CombatEntity {
   id: string; baseId: string; name: string; isEnemy: boolean;
@@ -16,11 +16,13 @@ interface CombatEntity {
 
 export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'ranked' }) {
   const navigate = useNavigate();
-  const characters = useGameStore((s) => s.characters);
+  const userId = localStorage.getItem('fern_user_id') || '';
+  const { characters: rawCharacters } = useHydratedCharacters(userId);
+  const characters = rawCharacters.filter(c => c.isUnlocked);
 
   // App states
   const [phase, setPhase] = useState<'select_level' | 'matchmaking' | 'prep' | 'combat'>('prep');
-  const [playerTeam, setPlayerTeam] = useState<(GameCharacter | null)[]>([null, null, null, null, null]);
+  const [playerTeam, setPlayerTeam] = useState<(any | null)[]>([null, null, null, null, null]);
   const [selectedRosterId, setSelectedRosterId] = useState<string | null>(null);
 
   // Combat details
@@ -181,7 +183,10 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
     if (aliveEnemies.length === 0) {
       if (mode === 'pve') {
         const kcReward = pveLevel * 20;
-        useGameStore.getState().addCurrency(kcReward);
+        (async () => {
+          const { data } = await (supabase as any).from('players').select('kc_balance').eq('id', userId).single();
+          if (data) await (supabase as any).from('players').update({ kc_balance: data.kc_balance + kcReward }).eq('id', userId);
+        })();
         toast.success(`Chiến Thắng PvE! Nhận ${kcReward} KC & 1 Genesis Core.`);
       } else if (mode === 'ranked') {
         toast.success("Chiến Thắng Xếp Hạng! +1 Sao hạng.");
