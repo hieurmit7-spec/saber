@@ -1,19 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { useGameStore } from "@/stores/gameStore";
 import { Button } from "@/components/ui/button";
-import { Settings, Calendar, Backpack, Star } from "lucide-react";
-import { useState } from "react";
-import { Input } from "@/components/ui/input";
+import { Calendar, Backpack, Star } from "lucide-react";
 
 export default function MainMenu() {
   const navigate = useNavigate();
-  const [openAIKey, setOpenAIKey] = useState(localStorage.getItem('OPENAI_API_KEY') || '');
-  const [showSettings, setShowSettings] = useState(false);
-
-  const saveSettings = () => {
-    localStorage.setItem('OPENAI_API_KEY', openAIKey);
-    setShowSettings(false);
-  };
 
   return (
     <div className="w-full h-screen overflow-hidden relative bg-black font-sans">
@@ -32,7 +23,7 @@ export default function MainMenu() {
       {/* Top UI */}
       <div className="absolute top-0 left-0 w-full p-4 flex justify-between z-10 pointer-events-none">
         
-        {/* Top Left: Quest Tracker & Settings */}
+        {/* Top Left: Quest Tracker */}
         <div className="space-y-4 pointer-events-auto">
           <div className="bg-black/60 backdrop-blur-md p-3 rounded-lg border border-white/10 max-w-xs shadow-lg">
             <h3 className="text-amber-400 font-bold mb-1 flex items-center gap-1">
@@ -43,36 +34,13 @@ export default function MainMenu() {
               <div className="bg-amber-500 w-1/3 h-full" />
             </div>
           </div>
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="bg-black/50 border-white/20 text-white hover:bg-black/80"
-            onClick={() => setShowSettings(!showSettings)}
-          >
-            <Settings className="w-4 h-4 mr-2" /> Cài đặt
-          </Button>
-
-          {showSettings && (
-            <div className="bg-black/80 backdrop-blur p-4 rounded-lg border border-white/20 mt-2">
-              <label className="text-white text-sm block mb-2">OpenAI API Key (LLM Genesis)</label>
-              <Input 
-                value={openAIKey} 
-                onChange={(e) => setOpenAIKey(e.target.value)} 
-                type="password"
-                className="bg-zinc-900 border-zinc-700 text-white mb-2"
-              />
-              <Button onClick={saveSettings} size="sm" className="w-full bg-amber-600 hover:bg-amber-700">Lưu</Button>
-            </div>
-          )}
         </div>
 
-        {/* Top Right: Resources & Utilities */}
         <div className="flex gap-4 pointer-events-auto items-start">
           <Button variant="ghost" className="bg-black/50 text-white hover:bg-black/80 border border-white/10 shrink-0">
             <Calendar className="w-5 h-5" />
           </Button>
-          <Button variant="ghost" className="bg-black/50 text-white hover:bg-black/80 border border-white/10 shrink-0">
+          <Button onClick={() => navigate('/bag')} variant="ghost" className="bg-black/50 text-white hover:bg-black/80 border border-white/10 shrink-0">
             <Backpack className="w-5 h-5" />
           </Button>
         </div>

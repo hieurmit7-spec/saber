@@ -8,12 +8,14 @@ import Auth from "./pages/Auth.tsx";
 import MainMenu from "./pages/MainMenu.tsx";
 import CharacterScreen from "./pages/CharacterScreen.tsx";
 import GachaScreen from "./pages/GachaScreen.tsx";
+import BagScreen from "./pages/BagScreen.tsx";
+import BattleMenu from "./pages/BattleMenu.tsx";
 import BattleScreen from "./pages/BattleScreen.tsx";
+import AbilityScreen from "./pages/AbilityScreen.tsx";
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  // Read session directly from localStorage (no Supabase Auth)
   const isAuthenticated = !!localStorage.getItem('fern_user_id');
 
   return (
@@ -27,7 +29,13 @@ const App = () => {
             <Route path="/" element={isAuthenticated ? <MainMenu /> : <Navigate to="/auth" />} />
             <Route path="/character" element={isAuthenticated ? <CharacterScreen /> : <Navigate to="/auth" />} />
             <Route path="/gacha" element={isAuthenticated ? <GachaScreen /> : <Navigate to="/auth" />} />
-            <Route path="/battle" element={isAuthenticated ? <BattleScreen /> : <Navigate to="/auth" />} />
+            <Route path="/bag" element={isAuthenticated ? <BagScreen /> : <Navigate to="/auth" />} />
+            <Route path="/battle" element={isAuthenticated ? <BattleMenu /> : <Navigate to="/auth" />} />
+            <Route path="/abilities" element={isAuthenticated ? <AbilityScreen /> : <Navigate to="/auth" />} />
+            
+            <Route path="/pve" element={isAuthenticated ? <BattleScreen mode="pve" /> : <Navigate to="/auth" />} />
+            <Route path="/pvp-private" element={isAuthenticated ? <BattleScreen mode="private" /> : <Navigate to="/auth" />} />
+            <Route path="/pvp-ranked" element={isAuthenticated ? <BattleScreen mode="ranked" /> : <Navigate to="/auth" />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </BrowserRouter>

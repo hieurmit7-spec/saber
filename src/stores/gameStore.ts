@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface Equipment {
   id: string;
@@ -48,6 +50,7 @@ export interface GameCharacter {
   videoAvatar?: string;
   videoBanner?: string;
   darknessStacks?: number;
+  custom_skill_3?: any;
 }
 
 export interface GachaResult {
@@ -90,6 +93,7 @@ interface GameState {
   rollGacha: (count: 1 | 10) => void;
   clearGachaResults: () => void;
   addPvpStar: () => void;
+  syncSupabase: () => Promise<void>;
 }
 
 const SABER: GameCharacter = {
@@ -176,8 +180,6 @@ const RARITY_MULTIPLIERS: Record<Equipment['rarity'], number> = {
   white: 1, blue: 2, purple: 3, gold: 5, red: 10, rainbow: 20
 };
 
-let equipCounter = 0;
-
 export function generateEquipment(rarity: Equipment['rarity'], forceType?: Equipment['type']): Equipment {
   const types: Equipment['type'][] = ['shoes', 'hat', 'armor', 'ring', 'belt', 'artifact'];
   const type = forceType || types[Math.floor(Math.random() * types.length)];
@@ -185,9 +187,11 @@ export function generateEquipment(rarity: Equipment['rarity'], forceType?: Equip
   const mult = RARITY_MULTIPLIERS[rarity];
   const nameIndex = Math.min(Object.keys(RARITY_MULTIPLIERS).indexOf(rarity), names.length - 1);
 
-  equipCounter++;
+  // Fallback to crypto.randomUUID if available, else random string
+  const uuid = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `eq-${Date.now()}-${Math.floor(Math.random()*10000)}`;
+  
   return {
-    id: `eq-${Date.now()}-${equipCounter}`,
+    id: uuid,
     name: names[nameIndex],
     type,
     typeName: EQUIP_TYPE_NAMES[type],
@@ -216,31 +220,29 @@ function createBaseCharacter(template: Omit<GameCharacter, 'equipment'>): GameCh
   return { ...template, equipment: { shoes: null, hat: null, armor: null, ring: null, belt: null, artifact: null } };
 }
 
-export const useGameStore = create<GameState>((set, get) => ({
-  currency: 5000,
-  characters: [SABER],
-  inventory: [],
-  selectedCharacterId: 'saber',
-  currentScreen: 'main',
-  dailyLoginClaimed: false,
-  pityCounter: 0,
-  showCalendar: false,
-  calendarClaims: {},
-  showEquipSelect: null,
-  gachaResults: null,
-  pvpRank: 1,
-  pvpStars: 0,
+export const useGameStore = create<GameState>()(
+  persist(
+    (set, get) => ({
+      currency: 999999999,
+      characters: [SABER],
+      inventory: [],
+      selectedCharacterId: 'saber',
+      currentScreen: 'main',
+      dailyLoginClaimed: false,
+      pityCounter: 0,
+      showCalendar: false,
+      calendarClaims: {},
+      showEquipSelect: null,
+      gachaResults: null,
+      pvpRank: 1,
+      pvpStars: 0,
 
-  setCurrency: (amount) => set({ currency: amount }),
-  addCurrency: (amount) => set((s) => ({ currency: s.currency + amount })),
-  spendCurrency: (amount) => {
-    const state = get();
-    if (state.currency >= amount) {
-      set({ currency: state.currency - amount });
-      return true;
-    }
-    return false;
-  },
+      setCurrency: (amount) => set({ currency: amount }),
+      addCurrency: (amount) => set((s) => ({ currency: s.currency + amount })),
+      spendCurrency: (amount) => {
+        set((s) => ({ currency: s.currency - amount }));
+        return true; 
+      },
   setCurrentScreen: (screen) => set({ currentScreen: screen }),
   selectCharacter: (id) => set({ selectedCharacterId: id }),
   addCharacter: (char) => set((s) => ({ characters: [...s.characters, char] })),
@@ -268,9 +270,16 @@ export const useGameStore = create<GameState>((set, get) => ({
   incrementPity: () => set((s) => ({ pityCounter: s.pityCounter + 1 })),
   resetPity: () => set({ pityCounter: 0 }),
   upgradeStars: (charId) => set((s) => ({
-    characters: s.characters.map((c) =>
-      c.id === charId && c.shards >= 10 ? { ...c, stars: Math.min(c.stars + 1, 6), shards: c.shards - 10 } : c
-    ),
+    characters: s.characters.map((c) => {
+      if (c.id === charId) {
+        const costs: Record<number, number> = { 1: 20, 2: 40, 3: 50, 4: 80, 5: 100 };
+        const cost = costs[c.stars];
+        if (cost && c.shards >= cost) {
+          return { ...c, stars: Math.min(c.stars + 1, 6), shards: c.shards - cost };
+        }
+      }
+      return c;
+    }),
   })),
   setShowCalendar: (show) => set({ showCalendar: show }),
   claimCalendarDay: (day) => {
@@ -366,7 +375,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
     return { pvpStars: newStars };
   }),
-}));
+  syncSupabase: async () => { /* Placeholder for sync */ }
+}),
+{
+  name: 'fern-game-store'
+}
+));
 
 export function getCharacterTotalStats(char: GameCharacter) {
   const eq = char.equipment;
