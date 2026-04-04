@@ -26,11 +26,25 @@ export default function MainMenu() {
       {/* Top Banner UI */}
       <div className="absolute top-0 left-0 w-full p-8 flex justify-between items-start z-10 pointer-events-none">
         
-        <div className="flex flex-col gap-2 pointer-events-auto">
-          <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500 uppercase tracking-widest drop-shadow-2xl">
-            Fern
-          </h1>
-          <p className="text-amber-100/50 text-sm tracking-widest">SABER'S LEGACY</p>
+        <div 
+          onClick={() => navigate('/profile')}
+          className="flex flex-col gap-2 pointer-events-auto cursor-pointer group hover:opacity-80 transition-opacity bg-black/40 backdrop-blur-md border border-white/10 p-4 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.5)]"
+        >
+          <div className="flex items-center gap-4">
+            <div className="relative w-16 h-16 bg-black border-2 border-amber-500 rounded-full flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(245,158,11,0.3)]">
+              {player?.avatar_url && player.avatar_url !== 'default' ? (
+                <img src={player.avatar_url} className="w-full h-full object-cover" />
+              ) : (
+                <span className="font-bold text-2xl text-amber-500">{player?.username?.substring(0, 2).toUpperCase() || 'P'}</span>
+              )}
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500 uppercase tracking-widest drop-shadow-lg">
+                {player?.username || 'GUEST'}
+              </h1>
+              <p className="text-amber-400 font-bold text-xs tracking-widest mt-1">LVL {player?.pvp_rank_level || 1} • VIP</p>
+            </div>
+          </div>
         </div>
 
         <div className="flex gap-6 pointer-events-auto items-center">
@@ -67,6 +81,21 @@ export default function MainMenu() {
         >
           <span className="text-left font-black text-2xl uppercase tracking-wider text-white/80 group-hover:text-purple-400 transition-colors">Gacha</span>
         </button>
+
+        <div className="flex gap-4 mt-4">
+          <button 
+            onClick={() => navigate('/team')}
+            className="flex-1 group relative h-14 bg-zinc-950/80 backdrop-blur border border-white/5 hover:border-blue-500/50 overflow-hidden flex items-center justify-center transition-all ring-1 ring-white/5 hover:bg-blue-900/20"
+          >
+            <span className="text-sm font-bold uppercase tracking-widest text-zinc-400 group-hover:text-blue-400 transition-colors">Tổ Đội</span>
+          </button>
+          <button 
+            onClick={() => navigate('/leaderboard')}
+            className="flex-1 group relative h-14 bg-zinc-950/80 backdrop-blur border border-white/5 hover:border-green-500/50 overflow-hidden flex items-center justify-center transition-all ring-1 ring-white/5 hover:bg-green-900/20"
+          >
+            <span className="text-sm font-bold uppercase tracking-widest text-zinc-400 group-hover:text-green-400 transition-colors">Xếp Hạng</span>
+          </button>
+        </div>
         
         <button 
           onClick={() => navigate('/bag')}

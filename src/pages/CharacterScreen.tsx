@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Star } from "lucide-react";
+import { ChevronLeft, Star, Footprints, HardHat, Shield, Disc, GripHorizontal, Sparkles } from "lucide-react";
 import { useHydratedCharacters, useInventory, useEquipItem, useUpgradeStar } from "@/hooks/usePlayerData";
 import { getCharacterTotalStats, calculateCP } from "@/stores/gameStore";
 import { toast } from "sonner";
@@ -111,16 +111,19 @@ export default function CharacterScreen() {
                 <EquipSlot 
                   label="Vũ khí" 
                   item={activeChar.equipment.artifact} 
+                  slotType="artifact"
                   onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'artifact' })} 
                 />
                 <EquipSlot 
                   label="Phụ kiện" 
                   item={activeChar.equipment.ring} 
+                  slotType="ring"
                   onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'ring' })} 
                 />
                 <EquipSlot 
                   label="Thắt Lưng" 
                   item={activeChar.equipment.belt} 
+                  slotType="belt"
                   onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'belt' })} 
                 />
               </div>
@@ -128,16 +131,19 @@ export default function CharacterScreen() {
                 <EquipSlot 
                   label="Mũ" 
                   item={activeChar.equipment.hat} 
+                  slotType="hat"
                   onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'hat' })} 
                 />
                 <EquipSlot 
                   label="Áo Giáp" 
                   item={activeChar.equipment.armor} 
+                  slotType="armor"
                   onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'armor' })} 
                 />
                 <EquipSlot 
                   label="Giày" 
                   item={activeChar.equipment.shoes} 
+                  slotType="shoes"
                   onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'shoes' })} 
                 />
               </div>
@@ -177,6 +183,24 @@ export default function CharacterScreen() {
             Thông Tin Data
           </button>
 
+          <div className="flex flex-col gap-2 mt-4 px-3 py-3 bg-white/5 border border-white/10">
+             <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">Mô tả Cấp Sao</h3>
+             {activeChar.id === 'sasuke' ? (
+                <div className="text-xs text-zinc-300 space-y-1">
+                  <div><span className="text-amber-500 font-bold min-w-[24px] inline-block">★2</span> Xuyên 30% giáp (Chidori)</div>
+                  <div><span className="text-amber-500 font-bold min-w-[24px] inline-block">★4</span> Susanoo phản 20% sát thương</div>
+                  <div><span className="text-amber-500 font-bold min-w-[24px] inline-block">★6</span> Kích hoạt Izanagi (Hồi sinh 1 lần)</div>
+                </div>
+             ) : activeChar.id === 'saber' ? (
+                <div className="text-xs text-zinc-300 space-y-1">
+                  <div><span className="text-amber-500 font-bold min-w-[24px] inline-block">★2+</span> Tăng tốc độ hồi Darkness</div>
+                  <div><span className="text-amber-500 font-bold min-w-[24px] inline-block">★6</span> Kháng sát thương chí tử (Giữ 1 HP)</div>
+                </div>
+             ) : (
+                <div className="text-xs text-zinc-500 italic">Nhân vật này chưa có mô tả đột phá.</div>
+             )}
+          </div>
+
           <div className="flex flex-col gap-3 mt-4">
             <h3 className="text-xs text-zinc-500 uppercase tracking-widest border-b border-white/5 pb-2 mb-2">Thông Số Cốt Lõi</h3>
             <StatRow label="Điểm Sinh Mệnh" val={totalStats.hp} base={activeChar.baseStats.hp} />
@@ -204,26 +228,65 @@ export default function CharacterScreen() {
                 )}
                 {inventory.filter((eq: any) => eq.type === showEquipSelect.slot && 
                   !FULL_CHARACTERS.some((c: any) => c.isUnlocked && c.id !== showEquipSelect.charId && [c.equipment.shoes?.id, c.equipment.hat?.id, c.equipment.armor?.id, c.equipment.ring?.id, c.equipment.belt?.id, c.equipment.artifact?.id].includes(eq.id))
-                ).map((eq: any) => {
+                )
+                .sort((a: any, b: any) => {
+                  const getEqScore = (eq: any) => {
+                    let score = 0;
+                    if (eq.rarity === 'rainbow') score += 100000;
+                    else if (eq.rarity === 'red') score += 10000;
+                    else if (eq.rarity === 'gold') score += 1000;
+                    else if (eq.rarity === 'purple') score += 100;
+                    else if (eq.rarity === 'blue') score += 10;
+                    score += (eq.stats?.hp || 0) + (eq.stats?.dmg || 0) * 2 + (eq.stats?.speed || 0) * 3 + (eq.stats?.armor || 0);
+                    return score;
+                  };
+                  return getEqScore(b) - getEqScore(a);
+                })
+                .map((eq: any) => {
                   const isEquippedByMe = FULL_CHARACTERS.find((c: any) => c.id === showEquipSelect.charId)?.equipment[eq.type]?.id === eq.id;
                   return (
                     <button 
                       key={eq.id} 
                       onClick={() => handleEquip(eq.id)}
-                      className={`text-left p-4 bg-zinc-900 border transition-colors hover:bg-zinc-800 ${isEquippedByMe ? 'border-amber-500' : 'border-white/5 hover:border-white/20'}`}
+                      className={`text-left p-4 bg-zinc-950/80 border transition-colors hover:bg-zinc-900 ${
+                         isEquippedByMe ? 'border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 
+                         eq.rarity === 'rainbow' ? 'border-indigo-500/50 hover:border-indigo-400' :
+                         eq.rarity === 'red' ? 'border-red-500/50 hover:border-red-400' :
+                         eq.rarity === 'gold' ? 'border-amber-500/50 hover:border-amber-400' :
+                         'border-white/5 hover:border-white/20'
+                      }`}
                     >
-                      <div className="flex justify-between mb-2">
-                        <span className={`text-xs font-bold uppercase ${
-                          eq.rarity === 'rainbow' ? 'text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-green-500 to-blue-500' :
-                          eq.rarity === 'red' ? 'text-red-500' :
-                          eq.rarity === 'gold' ? 'text-amber-500' :
-                          eq.rarity === 'purple' ? 'text-purple-500' : 'text-blue-500'
-                        }`}>{eq.name}</span>
-                        {isEquippedByMe && <span className="text-[10px] text-amber-500 tracking-widest uppercase">Equipped</span>}
+                      <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-2">
+                        <div className="flex items-center gap-3">
+                           <div className={`w-8 h-8 rounded shrink-0 flex items-center justify-center border border-white/10 ${
+                             eq.rarity === 'rainbow' ? 'bg-gradient-to-tr from-red-500 via-emerald-500 to-indigo-500 text-white shadow-[0_0_10px_rgba(255,255,255,0.5)]' :
+                             eq.rarity === 'red' ? 'bg-red-900 text-red-100 border-red-500' :
+                             eq.rarity === 'gold' ? 'bg-amber-900 text-amber-100 border-amber-500' :
+                             eq.rarity === 'purple' ? 'bg-purple-900 text-purple-100 border-purple-500' :
+                             eq.rarity === 'blue' ? 'bg-blue-900 text-blue-100 border-blue-500' : 'bg-zinc-800 text-zinc-300'
+                           }`}>
+                             {eq.type === 'shoes' ? <Footprints className="w-4 h-4" /> :
+                              eq.type === 'hat' ? <HardHat className="w-4 h-4" /> :
+                              eq.type === 'armor' ? <Shield className="w-4 h-4" /> :
+                              eq.type === 'ring' ? <Disc className="w-4 h-4" /> :
+                              eq.type === 'belt' ? <GripHorizontal className="w-4 h-4" /> :
+                              <Sparkles className="w-4 h-4" />}
+                           </div>
+                           <span className={`text-xs font-bold uppercase truncate max-w-[140px] ${
+                             eq.rarity === 'rainbow' ? 'text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-emerald-400 to-indigo-400' :
+                             eq.rarity === 'red' ? 'text-red-400' :
+                             eq.rarity === 'gold' ? 'text-amber-400' :
+                             eq.rarity === 'purple' ? 'text-purple-400' : 
+                             eq.rarity === 'blue' ? 'text-blue-400' : 'text-zinc-300'
+                           }`}>{eq.name}</span>
+                        </div>
+                        {isEquippedByMe && <span className="text-[9px] text-amber-500 tracking-widest uppercase ml-2 border border-amber-500 px-1 py-0.5 bg-amber-500/10">Đã trang bị</span>}
                       </div>
-                      <div className="text-zinc-400 text-xs flex gap-3">
-                        {eq.stats.hp > 0 && <span className="text-green-400">+{eq.stats.hp} HP</span>}
-                        {eq.stats.dmg > 0 && <span className="text-red-400">+{eq.stats.dmg} Dmg</span>}
+                      <div className="grid grid-cols-2 gap-y-1 text-zinc-400 text-xs">
+                        {eq.stats.hp > 0 && <span className="text-green-400 flex justify-between pr-2 border-r border-white/5">HP: <span>+{eq.stats.hp}</span></span>}
+                        {eq.stats.dmg > 0 && <span className="text-red-400 flex justify-between pl-2">DMG: <span>+{eq.stats.dmg}</span></span>}
+                        {eq.stats.armor > 0 && <span className="text-blue-400 flex justify-between pr-2 border-r border-white/5">ARMOR: <span>+{eq.stats.armor}</span></span>}
+                        {eq.stats.speed > 0 && <span className="text-zinc-300 flex justify-between pl-2">SPEED: <span>+{eq.stats.speed}</span></span>}
                       </div>
                     </button>
                   );
@@ -252,23 +315,29 @@ function StatRow({ label, val, base }: { label: string, val: number, base: numbe
   );
 }
 
-function EquipSlot({ label, item, onClick }: { label: string, item: any, onClick: () => void }) {
+function EquipSlot({ label, item, slotType, onClick }: { label: string, item: any, slotType: string, onClick: () => void }) {
+  const renderIcon = (isEquipped: boolean) => {
+    const iconClass = isEquipped ? "w-8 h-8 drop-shadow-md" : "w-6 h-6 opacity-30 group-hover:opacity-100 transition-opacity text-white";
+    if (slotType === 'shoes') return <Footprints className={iconClass} />;
+    if (slotType === 'hat') return <HardHat className={iconClass} />;
+    if (slotType === 'armor') return <Shield className={iconClass} />;
+    if (slotType === 'ring') return <Disc className={iconClass} />;
+    if (slotType === 'belt') return <GripHorizontal className={iconClass} />;
+    return <Sparkles className={iconClass} />;
+  };
+
   return (
     <button onClick={onClick} className="flex gap-4 items-center group">
        <div className={`w-16 h-16 border flex items-center justify-center transition-all ${
          item 
-          ? (item.rarity === 'rainbow' ? 'border-indigo-400 bg-indigo-950/50 shadow-[0_0_15px_rgba(99,102,241,0.3)]' :
-             item.rarity === 'red' ? 'border-red-500 bg-red-950/50' : 
-             item.rarity === 'gold' ? 'border-amber-500 bg-amber-950/50' : 
-             item.rarity === 'purple' ? 'border-purple-500 bg-purple-950/50' : 
-             'border-blue-500 bg-blue-950/50')
+          ? (item.rarity === 'rainbow' ? 'border-indigo-400 bg-indigo-950/50 shadow-[0_0_15px_rgba(99,102,241,0.3)] text-indigo-400' :
+             item.rarity === 'red' ? 'border-red-500 bg-red-950/50 text-red-500' : 
+             item.rarity === 'gold' ? 'border-amber-500 bg-amber-950/50 text-amber-500' : 
+             item.rarity === 'purple' ? 'border-purple-500 bg-purple-950/50 text-purple-500' : 
+             'border-blue-500 bg-blue-950/50 text-blue-500')
           : 'border-white/10 bg-black hover:border-white/30'
        }`}>
-         {item ? (
-           <span className="text-xs uppercase font-black text-white/50">{item.icon}</span>
-         ) : (
-           <span className="text-2xl font-black text-zinc-800">+</span>
-         )}
+         {renderIcon(!!item)}
        </div>
        <div className="text-left">
          <div className="text-[10px] text-zinc-500 tracking-widest uppercase mb-1">{label}</div>

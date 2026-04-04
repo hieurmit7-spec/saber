@@ -5,7 +5,7 @@ import { ChevronLeft, FastForward, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { useHydratedCharacters } from "@/hooks/usePlayerData";
+import { useHydratedCharacters, usePlayer, useArenaOpponents } from "@/hooks/usePlayerData";
 
 interface CombatEntity {
   id: string; baseId: string; name: string; isEnemy: boolean;
@@ -15,12 +15,17 @@ interface CombatEntity {
   izanagiUsed: boolean;  // Sasuke 6★ once-per-battle
   position: number; state: 'idle' | 'attacking' | 'dead';
   stars: number;
+  damageDealt: number;
+  damageTaken: number;
+  healingDone: number;
 }
 
 export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'ranked' }) {
   const navigate = useNavigate();
   const userId = localStorage.getItem('fern_user_id') || '';
+  const { data: player } = usePlayer(userId);
   const { characters: rawCharacters } = useHydratedCharacters(userId);
+  const { data: arenaOpponents, isLoading: opponentsLoading } = useArenaOpponents(userId, player?.pvp_rank_level || 1);
   const characters = rawCharacters.filter(c => c.isUnlocked);
 
   // App states
@@ -41,6 +46,7 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
   const [activeAttacker, setActiveAttacker] = useState<{ id: string, attackerPos: number, targetPos: number, isEnemy: boolean, targetIsEnemy: boolean } | null>(null);
   const [slashTargetId, setSlashTargetId] = useState<string | null>(null);
   const [floatingTexts, setFloatingTexts] = useState<{ id: string, targetId: string, dmg: number }[]>([]);
+  const [matchResult, setMatchResult] = useState<'victory' | 'defeat' | null>(null);
 
   // PvE
   const [pveLevel, setPveLevel] = useState(1);
@@ -53,7 +59,18 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
 
   // PvP Ranked
   const [matchTime, setMatchTime] = useState(0);
-  const [rankStars, setRankStars] = useState(0); // mock state, should be global store
+  const [selectedOpponent, setSelectedOpponent] = useState<any>(null); // For Async Arena
+
+  // Init playerTeam from player DB
+  useEffect(() => {
+    if (player && player.team_setup && Array.isArray(player.team_setup)) {
+      const populatedTeam = player.team_setup.map(charId => charId ? rawCharacters.find(c => c.id === charId) || null : null);
+      // Only set if not all null
+      if (populatedTeam.some(c => c !== null)) {
+        setPlayerTeam(populatedTeam);
+      }
+    }
+  }, [player, rawCharacters]);
 
   // Init Phase
   useEffect(() => {
@@ -61,33 +78,12 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
     else if (mode === 'private') setPhase('matchmaking');
     else if (mode === 'ranked') {
       setPhase('matchmaking');
-      findRankedMatch();
     }
   }, [mode]);
 
-  useEffect(() => {
-    let t: any;
-    if (phase === 'matchmaking' && mode === 'ranked') {
-      t = setInterval(() => {
-        setMatchTime(prev => {
-          if (prev >= 120) {
-            // Secret Bot Fallback Trigger
-            clearInterval(t);
-            setPhase('prep');
-            toast.success("Đã tìm thấy đối thủ!");
-            return prev;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(t);
-  }, [phase, mode]);
-
-  const findRankedMatch = () => {
-    // Giả lập đưa vào queue bằng supabase realtime (bỏ qua bước push db thật để tối giản cho phía client fallback bot)
-    setPhase('matchmaking');
-    setMatchTime(0);
+  const handleSelectOpponent = (opponent: any) => {
+    setSelectedOpponent(opponent);
+    setPhase('prep'); // Optionally they can still view their team before hitting "Sẵn Sàng"
   };
 
   const handleJoinPrivate = () => {
@@ -126,15 +122,53 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
   };
 
   const generateEnemyTeam = (): CombatEntity[] => {
-    let mult = mode === 'pve' ? pveLevel : 5;
     const list: CombatEntity[] = [];
 
-    if (mode === 'pve' && pveLevel === 7) {
-      list.push({ id: 'e0', baseId: 'boss_dragon', name: 'Nhện Chú Vương', isEnemy: true, maxHp: 5000, hp: 5000, speed: 100, dmg: 400, armor: 1000, heat: 0, shield: 0, izanagiUsed: false, position: 2, state: 'idle', stars: 6 });
+    if (mode === 'ranked' && selectedOpponent && selectedOpponent.team_setup) {
+      // Async Arena enemy generation
+      selectedOpponent.team_setup.forEach((charId: string | null, idx: number) => {
+        if (!charId) return;
+        // Search in ALL_CHARS to get base stats. (Ideally we hydrate with opponent's equip, but base+stars is fine for MVP)
+        const baseChar = rawCharacters.find(c => c.id === charId);
+        if (baseChar) {
+          // Approximate enemy stats based on their rank or CP
+          const mult = selectedOpponent.pvp_rank_level || 1;
+          list.push({
+            id: `e_${idx}`,
+            baseId: baseChar.id,
+            name: baseChar.name,
+            isEnemy: true,
+            maxHp: baseChar.baseStats.hp + (mult * 100),
+            hp: baseChar.baseStats.hp + (mult * 100),
+            speed: baseChar.baseStats.speed,
+            dmg: baseChar.baseStats.dmg + (mult * 20),
+            armor: baseChar.baseStats.armor + (mult * 50),
+            heat: 0,
+            shield: 0,
+            izanagiUsed: false,
+            position: idx,
+            state: 'idle',
+            stars: baseChar.stars,
+            damageDealt: 0, damageTaken: 0, healingDone: 0
+          });
+        }
+      });
+      // Fallback if team empty:
+      if (list.length === 0) {
+        list.push({ id: 'e1', baseId: 'goblin', name: 'Thích Khách', isEnemy: true, maxHp: 1000, hp: 1000, speed: 80, dmg: 100, armor: 200, heat: 0, shield: 0, izanagiUsed: false, position: 2, state: 'idle', stars: 1, damageDealt: 0, damageTaken: 0, healingDone: 0 });
+      }
       return list;
     }
-    list.push({ id: 'e1', baseId: 'goblin', name: 'Thích Khách', isEnemy: true, maxHp: 500 * mult, hp: 500 * mult, speed: 80, dmg: 100 * mult, armor: 200 * mult, heat: 0, shield: 0, izanagiUsed: false, position: 0, state: 'idle', stars: 1 });
-    list.push({ id: 'e2', baseId: 'slime', name: 'Ma Vật', isEnemy: true, maxHp: 800 * mult, hp: 800 * mult, speed: 60, dmg: 80 * mult, armor: 300 * mult, heat: 0, shield: 0, izanagiUsed: false, position: 2, state: 'idle', stars: 1 });
+
+    // PvE / Private modes
+    let mult = mode === 'pve' ? pveLevel : 5;
+    
+    if (mode === 'pve' && pveLevel === 7) {
+      list.push({ id: 'e0', baseId: 'boss_dragon', name: 'Nhện Chú Vương', isEnemy: true, maxHp: 5000, hp: 5000, speed: 100, dmg: 400, armor: 1000, heat: 0, shield: 0, izanagiUsed: false, position: 2, state: 'idle', stars: 6, damageDealt: 0, damageTaken: 0, healingDone: 0 });
+      return list;
+    }
+    list.push({ id: 'e1', baseId: 'goblin', name: 'Thích Khách', isEnemy: true, maxHp: 500 * mult, hp: 500 * mult, speed: 80, dmg: 100 * mult, armor: 200 * mult, heat: 0, shield: 0, izanagiUsed: false, position: 0, state: 'idle', stars: 1, damageDealt: 0, damageTaken: 0, healingDone: 0 });
+    list.push({ id: 'e2', baseId: 'slime', name: 'Ma Vật', isEnemy: true, maxHp: 800 * mult, hp: 800 * mult, speed: 60, dmg: 80 * mult, armor: 300 * mult, heat: 0, shield: 0, izanagiUsed: false, position: 2, state: 'idle', stars: 1, damageDealt: 0, damageTaken: 0, healingDone: 0 });
     return list;
   };
 
@@ -176,6 +210,9 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
         state: 'idle',
         stars: c.stars,
         izanagiUsed: false, // Sasuke 6★ once-per-battle
+        damageDealt: 0,
+        damageTaken: 0,
+        healingDone: 0,
       };
     }).filter(Boolean) as CombatEntity[];
 
@@ -195,7 +232,7 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
     if (alivePlayers.length === 0) {
       if (mode === 'ranked') toast.error('Thất bại! -1 Sao hạng.');
       else toast.error('Đội bạn đã bị tiêu diệt!');
-      setTimeout(() => navigate('/battle'), 2000);
+      setMatchResult('defeat');
       return;
     }
     if (aliveEnemies.length === 0) {
@@ -211,7 +248,7 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
       } else {
         toast.success('Chiến thắng phòng kín!');
       }
-      setTimeout(() => navigate('/battle'), 3000);
+      setMatchResult('victory');
       return;
     }
 
@@ -229,12 +266,6 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
     if (currentEntity.baseId === 'saber' && !currentEntity.isEnemy && currentEntity.heat >= 100) {
       setActiveUltCharacter('saber');
       setIsCastingUlt(true);
-      if (videoRef.current) {
-        videoRef.current.currentTime = 0;
-        videoRef.current.muted = false;
-        videoRef.current.playbackRate = speedMult;
-        videoRef.current.play();
-      }
       return;
     }
 
@@ -242,12 +273,6 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
     if (currentEntity.baseId === 'sasuke' && !currentEntity.isEnemy && currentEntity.heat >= 100) {
       setActiveUltCharacter('sasuke');
       setIsCastingUlt(true);
-      if (videoRef.current) {
-        videoRef.current.currentTime = 0;
-        videoRef.current.muted = false;
-        videoRef.current.playbackRate = speedMult;
-        videoRef.current.play();
-      }
       return;
     }
 
@@ -302,56 +327,72 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
   };
 
   const handleDamage = (targetId: string, dmg: number, attacker?: any) => {
-    setCombatants(prev => prev.map(c => {
-      if (c.id !== targetId) return c;
+    setCombatants(prev => {
+      const nextState = prev.map(c => ({ ...c }));
+      const target = nextState.find(c => c.id === targetId);
+      if (!target) return nextState;
 
-      // ── SASUKE: Sharingan Dodge ──
-      if (c.baseId === 'sasuke' && !c.isEnemy) {
-        const dodgeRate = c.stars >= 6 ? 0.40 : c.stars >= 2 ? 0.30 : 0.20;
+      // Sasuke Dodge
+      if (target.baseId === 'sasuke' && !target.isEnemy) {
+        const dodgeRate = target.stars >= 6 ? 0.40 : target.stars >= 2 ? 0.30 : 0.20;
         if (Math.random() < dodgeRate) {
-          // Dodge success! Gain 30 Chakra
           toast(`⚡ Sasuke né tránh! +30 Chakra`, { duration: 1200 });
-          return { ...c, heat: Math.min(100, c.heat + 30) };
+          target.heat = Math.min(100, target.heat + 30);
+          return nextState;
         }
       }
 
-      // ── SASUKE: Susanoo Shield absorbs damage ──
       let remainingDmg = dmg;
-      let newShield = c.shield || 0;
-      if (c.baseId === 'sasuke' && newShield > 0) {
-        const absorbed = Math.min(newShield, remainingDmg);
-        newShield -= absorbed;
+      if (target.baseId === 'sasuke' && target.shield > 0) {
+        const absorbed = Math.min(target.shield, remainingDmg);
+        target.shield -= absorbed;
         remainingDmg -= absorbed;
 
-        // Shield reflect 20% if 4★
-        if (c.stars >= 4 && attacker && absorbed > 0) {
+        if (target.stars >= 4 && attacker && absorbed > 0) {
           const reflectDmg = Math.floor(absorbed * 0.2);
-          setCombatants(prev2 => prev2.map(a => a.id === attacker.id ? { ...a, hp: Math.max(0, a.hp - reflectDmg) } : a));
+          const att = nextState.find(c => c.id === attacker.id);
+          if (att) {
+            const actualReflect = Math.min(att.hp, reflectDmg);
+            att.hp -= actualReflect;
+            att.damageTaken += actualReflect;
+            target.damageDealt += actualReflect;
+          }
           toast(`🛡 Susanoo phản chiêu! -${reflectDmg}`, { duration: 1200 });
         }
       }
 
-      const newHp = Math.max(0, c.hp - remainingDmg);
+      const hpLost = Math.min(target.hp, remainingDmg);
+      target.hp -= hpLost;
+      target.damageTaken += hpLost;
 
-      // ── SASUKE 6★ IZANAGI: Death defiance ──
-      if (c.baseId === 'sasuke' && newHp === 0 && c.stars >= 6 && !c.izanagiUsed) {
+      if (attacker) {
+        const att = nextState.find(c => c.id === attacker.id);
+        if (att) att.damageDealt += hpLost;
+      }
+
+      // Sasuke Izanagi
+      if (target.baseId === 'sasuke' && target.hp === 0 && target.stars >= 6 && !target.izanagiUsed) {
         toast('⚡ IZANAGI — Sasuke viết lại thực tại!', { duration: 2000 });
-        return { ...c, hp: Math.floor(c.maxHp * 0.5), shield: 0, izanagiUsed: true };
+        const healAmt = Math.floor(target.maxHp * 0.5);
+        target.hp = healAmt;
+        target.shield = 0;
+        target.izanagiUsed = true;
+        target.healingDone += healAmt;
       }
 
-      // ── SABER: heat gain when hit ──
-      let newHeat = c.heat;
-      if (c.baseId === 'saber' && newHp > 0) {
-        const pctLost = (dmg / c.maxHp) * 100;
+      // Saber heat
+      if (target.baseId === 'saber' && target.hp > 0) {
+        const pctLost = (dmg / target.maxHp) * 100;
         const heatRates = [1.5, 1.5, 2.0, 2.0, 2.5, 2.5, 3.0];
-        const rate = heatRates[Math.min(c.stars, 6)] || 1.5;
-        newHeat = Math.min(100, c.heat + pctLost * rate);
-      } else if (c.baseId === 'saber' && newHp === 0 && c.stars === 6 && c.heat !== -1) {
-        return { ...c, hp: 1, heat: -1 };
+        const rate = heatRates[Math.min(target.stars, 6)] || 1.5;
+        target.heat = Math.min(100, target.heat + pctLost * rate);
+      } else if (target.baseId === 'saber' && target.hp === 0 && target.stars === 6 && target.heat !== -1) {
+        target.hp = 1;
+        target.heat = -1;
       }
 
-      return { ...c, hp: newHp, heat: newHeat, shield: newShield };
-    }));
+      return nextState;
+    });
   };
 
   const finishUltimate = () => {
@@ -400,6 +441,29 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
     return () => clearTimeout(t);
   }, [currentTurnIdx, phase, isCastingUlt, combatants, speedMult]);
 
+  // Handle Ultimate Video playback dynamically without DOM remounts
+  useEffect(() => {
+    if (isCastingUlt && activeUltCharacter && videoRef.current) {
+      setTimeout(() => {
+        const v = videoRef.current;
+        if (!v) return;
+        v.src = activeUltCharacter === 'sasuke' ? "/videos/sasuke ultimate.mp4" : "/videos/banner-ulti.mp4";
+        v.load();
+        // Set playback details when video data actually loads so logic doesn't reset it
+        v.onloadeddata = () => {
+          v.currentTime = 0;
+          v.muted = false;
+          v.defaultPlaybackRate = speedMult;
+          v.playbackRate = speedMult;
+          const playPromise = v.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(() => {});
+          }
+        };
+      }, 50);
+    }
+  }, [isCastingUlt, activeUltCharacter, speedMult]);
+
   // Phase Renders
   if (phase === 'select_level') return (
     <div className="w-full h-screen bg-zinc-950 text-white p-8 overflow-y-auto">
@@ -433,14 +497,69 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
   if (phase === 'matchmaking' && mode === 'ranked') return (
     <div className="w-full h-screen flex flex-col items-center justify-center bg-zinc-950 text-white relative">
       <video autoPlay loop muted playsInline className="absolute w-full h-full object-cover opacity-20"><source src="/videos/spring-bg.mp4" /></video>
-      <div className="z-10 text-center">
-        <Loader2 className="w-16 h-16 animate-spin text-red-500 mx-auto mb-4" />
-        <h2 className="text-4xl font-black text-red-400">Đang Trinh Sát Đối Thủ...</h2>
-        <p className="text-xl mt-4 font-mono text-zinc-300">00:{(matchTime < 10 ? '0' : '')}{matchTime}</p>
-        <p className="mt-8 mb-8 text-zinc-500">Hàng chờ Rank Đồng. (Bí mật: Hệ thống tự gọi hỗ trợ nếu kẹt mạng &gt; 120s)</p>
-        <Button variant="outline" className="border-red-500/50 text-red-400 hover:bg-red-500/20" onClick={() => navigate('/battle')}>
-          Hủy Tìm Trận
-        </Button>
+      <div className="absolute top-8 left-8 z-20">
+        <Button variant="ghost" onClick={() => navigate('/battle')}><ChevronLeft /> Rút Lui</Button>
+      </div>
+
+      <div className="z-10 flex flex-col items-center w-full max-w-6xl">
+        <h2 className="text-4xl font-black text-red-500 uppercase tracking-[0.2em] drop-shadow-[0_0_15px_rgba(239,68,68,0.5)] mb-12">Đấu Trường Sinh Tử</h2>
+        
+        {opponentsLoading ? (
+          <div className="flex flex-col items-center text-red-400">
+            <Loader2 className="w-12 h-12 animate-spin mb-4" />
+            <span className="uppercase tracking-widest font-bold">Đang tìm kiếm vệ tinh...</span>
+          </div>
+        ) : (
+          <div className="flex justify-center gap-8 w-full">
+            {(!arenaOpponents || arenaOpponents.length === 0) ? (
+              <div className="text-center text-zinc-500 uppercase tracking-widest">Không tìm thấy đối thủ nào. Hãy quay lại sau!</div>
+            ) : (
+              arenaOpponents.map((opp: any, idx: number) => {
+                const isMiddle = idx === 1;
+                return (
+                  <div key={opp.id} className={`relative flex flex-col items-center bg-zinc-950/80 border backdrop-blur-md p-6 transition-all ${isMiddle ? 'border-amber-500 shadow-[0_0_30px_rgba(245,158,11,0.2)] scale-110 -translate-y-4' : 'border-white/10 hover:border-red-500 mt-4'}`}>
+                    {isMiddle && <div className="absolute -top-3 bg-amber-500 text-black font-black text-[10px] px-3 py-0.5 uppercase tracking-widest">Kẻ Thù Truyền Kiếp</div>}
+                    
+                    {/* Avatar with frame */}
+                    {(() => {
+                      const frameStyle = {
+                        none: 'border-white/20',
+                        gold: 'border-[#FFD700] shadow-[0_0_12px_rgba(255,215,0,0.6)]',
+                        red_fire: 'border-red-500 shadow-[0_0_12px_rgba(239,68,68,0.7)]',
+                        blue_ice: 'border-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.7)]',
+                        purple_void: 'border-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.7)]',
+                      }[opp.frame_url as string] || 'border-white/20';
+                      const hasAvatar = opp.avatar_url && opp.avatar_url !== 'default';
+                      return (
+                        <div className={`w-24 h-24 rounded-full border-4 mb-4 overflow-hidden flex items-center justify-center bg-zinc-900 ${frameStyle}`}>
+                          {hasAvatar
+                            ? <img src={opp.avatar_url} className="w-full h-full object-cover" />
+                            : <span className="text-3xl font-black text-zinc-500 uppercase">{opp.username.substring(0, 2)}</span>
+                          }
+                        </div>
+                      );
+                    })()}
+                    
+                    <h3 className="text-xl font-black uppercase tracking-widest mb-1 text-white">{opp.username}</h3>
+                    <div className="text-red-400 font-bold uppercase tracking-widest text-xs mb-4">Level {opp.pvp_rank_level}</div>
+                    
+                    <div className="flex flex-col gap-1 text-center mb-6 w-full px-4 border-t border-b border-white/5 py-3">
+                      <div className="text-xs text-zinc-500 uppercase">Lực chiến</div>
+                      <div className="text-lg font-black text-amber-500">{opp.combat_power.toLocaleString()}</div>
+                    </div>
+
+                    <Button 
+                      className={`w-full font-bold uppercase tracking-widest ${isMiddle ? 'bg-amber-600 hover:bg-amber-500 text-white' : 'bg-red-600 hover:bg-red-500 text-white'}`}
+                      onClick={() => handleSelectOpponent(opp)}
+                    >
+                      Nghiền Nát
+                    </Button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -503,17 +622,88 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
       {/* Video Overlay Ultimates */}
       <div className={`absolute inset-0 z-50 bg-black transition-opacity duration-500 ${isCastingUlt ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
         <video 
-          key={activeUltCharacter}
           ref={videoRef} 
           className="w-full h-full object-cover" 
           onEnded={finishUltimate}
-        >
-          <source 
-            src={activeUltCharacter === 'sasuke' ? "/videos/sasuke ultimate.mp4" : "/videos/banner-ulti.mp4"} 
-            type="video/mp4" 
-          />
-        </video>
+        />
       </div>
+      {/* MVP MODAL OVERLAY */}
+      {matchResult && (
+        <div className="absolute inset-0 z-[100] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-8 animate-in fade-in duration-500">
+          <h2 className={`text-6xl font-black italic tracking-widest uppercase mb-12 drop-shadow-2xl ${matchResult === 'victory' ? 'text-amber-500' : 'text-red-600'}`}>
+            {matchResult === 'victory' ? 'VICTORY' : 'DEFEAT'}
+          </h2>
+          
+          {(() => {
+            const playerCombatants = combatants.filter(c => !c.isEnemy);
+            let mvp = playerCombatants[0];
+            let maxScore = -1;
+            playerCombatants.forEach(c => {
+              const score = (c.damageDealt + c.damageTaken + c.healingDone) / 3;
+              if (score > maxScore) {
+                maxScore = score;
+                mvp = c;
+              }
+            });
+
+            return mvp ? (
+              <div className="flex flex-col items-center bg-zinc-950/80 border border-white/10 p-8 min-w-[500px] shadow-2xl relative">
+                <div className="absolute -top-4 bg-amber-500 text-black font-black text-xs px-4 py-1 uppercase tracking-widest">M.V.P</div>
+                
+                <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-amber-500 shadow-[0_0_30px_rgba(245,158,11,0.5)] mb-6">
+                  <img src={mvp.baseId === 'sasuke' ? "/videos/sasuke.gif" : mvp.baseId === 'saber' ? "/videos/saber-avatar.gif" : ""} className="w-full h-full object-cover saturate-150" />
+                </div>
+                
+                <h3 className="text-3xl font-black text-white uppercase tracking-widest mb-8">{mvp.name}</h3>
+                
+                <div className="grid grid-cols-3 gap-8 w-full text-center">
+                  <div className="flex flex-col items-center bg-black/50 p-4 border border-white/5">
+                    <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">Damage Dealt</span>
+                    <span className="text-xl font-black text-red-500">{Math.floor(mvp.damageDealt)}</span>
+                  </div>
+                  <div className="flex flex-col items-center bg-black/50 p-4 border border-white/5">
+                    <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">Damage Taken</span>
+                    <span className="text-xl font-black text-blue-500">{Math.floor(mvp.damageTaken)}</span>
+                  </div>
+                  <div className="flex flex-col items-center bg-black/50 p-4 border border-white/5">
+                    <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">Healing Done</span>
+                    <span className="text-xl font-black text-green-500">{Math.floor(mvp.healingDone)}</span>
+                  </div>
+                </div>
+              </div>
+            ) : null;
+          })()}
+
+          {/* Extended Combat Stats */}
+          <div className="w-full max-w-4xl mt-12 bg-zinc-950 border border-white/10 p-6 custom-scrollbar overflow-y-auto max-h-[300px]">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-6 text-center border-b border-white/5 pb-4">Bảng Thống Kê Chi Tiết</h3>
+            <div className="flex text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2 px-4">
+              <div className="w-48">Nhân Vật</div>
+              <div className="flex-1 text-center text-red-500/70">Sát Thương Gây Ra</div>
+              <div className="flex-1 text-center text-blue-500/70">Chống Chịu</div>
+              <div className="flex-1 text-center text-green-500/70">Hồi Máu</div>
+            </div>
+            {combatants.filter(c => !c.isEnemy).map(c => (
+              <div key={c.id} className="flex items-center text-sm font-bold px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors">
+                <div className="w-48 text-white uppercase tracking-widest flex items-center gap-2">
+                  <div className="w-6 h-6 bg-black border border-white/10 rounded-full flex items-center justify-center overflow-hidden">
+                    <img src={c.baseId === 'sasuke' ? "/videos/sasuke.gif" : c.baseId === 'saber' ? "/videos/saber-avatar.gif" : ""} className="w-full h-full object-cover" />
+                  </div>
+                  {c.name}
+                </div>
+                <div className="flex-1 text-center text-red-400">{Math.floor(c.damageDealt).toLocaleString()}</div>
+                <div className="flex-1 text-center text-blue-400">{Math.floor(c.damageTaken).toLocaleString()}</div>
+                <div className="flex-1 text-center text-green-400">{Math.floor(c.healingDone).toLocaleString()}</div>
+              </div>
+            ))}
+          </div>
+
+          <button onClick={() => navigate('/battle')} className="mt-16 border border-amber-500 bg-amber-500/10 text-amber-500 px-12 py-4 font-bold tracking-[0.3em] uppercase hover:bg-amber-500/20 transition-colors text-sm shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+            Tiếp Tục
+          </button>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -606,6 +796,7 @@ function CombatGrid({ row, combatants, activeAttacker, slashTargetId, floatingTe
           </div>
         );
       })}
+
     </div>
   );
 }

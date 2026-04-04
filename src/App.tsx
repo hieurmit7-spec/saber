@@ -12,6 +12,9 @@ import BagScreen from "./pages/BagScreen.tsx";
 import BattleMenu from "./pages/BattleMenu.tsx";
 import BattleScreen from "./pages/BattleScreen.tsx";
 import AbilityScreen from "./pages/AbilityScreen.tsx";
+import TeamSetupScreen from "./pages/TeamSetupScreen.tsx";
+import LeaderboardScreen from "./pages/LeaderboardScreen.tsx";
+import PlayerProfileScreen from "./pages/PlayerProfileScreen.tsx";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +35,10 @@ const App = () => {
             <Route path="/bag" element={isAuthenticated ? <BagScreen /> : <Navigate to="/auth" />} />
             <Route path="/battle" element={isAuthenticated ? <BattleMenu /> : <Navigate to="/auth" />} />
             <Route path="/abilities" element={isAuthenticated ? <AbilityScreen /> : <Navigate to="/auth" />} />
+            <Route path="/team" element={isAuthenticated ? <TeamSetupScreen /> : <Navigate to="/auth" />} />
+            <Route path="/leaderboard" element={isAuthenticated ? <LeaderboardScreen /> : <Navigate to="/auth" />} />
+            <Route path="/profile" element={isAuthenticated ? <PlayerProfileScreen /> : <Navigate to="/auth" />} />
+            <Route path="/profile/:targetId" element={isAuthenticated ? <PlayerProfileScreen /> : <Navigate to="/auth" />} />
             
             <Route path="/pve" element={isAuthenticated ? <BattleScreen mode="pve" /> : <Navigate to="/auth" />} />
             <Route path="/pvp-private" element={isAuthenticated ? <BattleScreen mode="private" /> : <Navigate to="/auth" />} />

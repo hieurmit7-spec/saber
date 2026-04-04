@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getPlayerInfo, getPlayerCharacters, equipItemToCharacter, upgradeCharacterStar } from '@/services/playerService';
+import { getPlayerInfo, getPlayerCharacters, equipItemToCharacter, upgradeCharacterStar, updateTeamSetup, getLeaderboard, getArenaOpponents, updatePlayerProfile } from '@/services/playerService';
 import { getInventory } from '@/services/equipmentService';
 import { rollGachaRPC } from '@/services/gachaService';
 import { SABER, SASUKE, BASE_CHARACTERS } from '@/constants/gameData';
@@ -118,6 +118,50 @@ export const useRollGacha = (userId: string) => {
       queryClient.invalidateQueries({ queryKey: ['player', userId] });
       queryClient.invalidateQueries({ queryKey: ['inventory', userId] });
       queryClient.invalidateQueries({ queryKey: ['characters', userId] });
+    }
+  });
+};
+
+export const useUpdateTeamSetup = (userId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ teamSetup, combatPower }: { teamSetup: any[], combatPower: number }) =>
+      updateTeamSetup(userId, teamSetup, combatPower),
+    onSuccess: () => {
+      toast.success('Đã lưu đội hình!');
+      queryClient.invalidateQueries({ queryKey: ['player', userId] });
+    }
+  });
+};
+
+export const useLeaderboard = () => {
+  return useQuery({
+    queryKey: ['leaderboard'],
+    queryFn: () => getLeaderboard(),
+  });
+};
+
+export const useArenaOpponents = (userId: string, currentRank: number) => {
+  return useQuery({
+    queryKey: ['arenaOpponents', userId, currentRank],
+    queryFn: () => getArenaOpponents(userId, currentRank),
+    enabled: !!userId && currentRank !== undefined,
+  });
+};
+
+export const useUpdateProfile = (userId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ username, bio, avatarUrl, frameUrl }: { username: string, bio: string, avatarUrl: string, frameUrl: string }) =>
+      updatePlayerProfile(userId, username, bio, avatarUrl, frameUrl),
+    onSuccess: () => {
+      toast.success('Đã cập nhật hồ sơ!');
+      queryClient.invalidateQueries({ queryKey: ['player', userId] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Lỗi lưu hồ sơ!');
     }
   });
 };

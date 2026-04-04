@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Footprints, HardHat, Shield, Disc, GripHorizontal, Sparkles } from "lucide-react";
 import { useInventory } from "@/hooks/usePlayerData";
 
 export default function BagScreen() {
@@ -42,13 +42,20 @@ export default function BagScreen() {
       <div className="grid grid-cols-6 gap-4 max-h-[80vh] overflow-y-auto custom-scrollbar pr-4 pb-32">
         {filteredItems.map((eq: any, i: number) => (
           <div key={eq.id} className="bg-zinc-950 border border-white/5 p-4 hover:border-white/20 transition-colors animate-in zoom-in group relative" style={{ animationDelay: `${i * 20}ms` }}>
-            <div className={`w-12 h-12 mb-4 shrink-0 rounded-full border border-white/10 ${
+            <div className={`w-12 h-12 mb-4 shrink-0 flex items-center justify-center rounded-sm border border-white/10 ${
               eq.rarity === 'rainbow' ? 'bg-gradient-to-tr from-red-500 via-emerald-500 to-indigo-500 shadow-[0_0_20px_rgba(255,255,255,0.5)] animate-pulse' :
               eq.rarity === 'red' ? 'bg-red-600 shadow-[0_0_15px_red]' :
               eq.rarity === 'gold' ? 'bg-amber-500 shadow-[0_0_15px_orange]' :
               eq.rarity === 'purple' ? 'bg-purple-600' :
               eq.rarity === 'blue' ? 'bg-blue-600' : 'bg-zinc-300'
-            }`} />
+            }`}>
+              {eq.type === 'shoes' ? <Footprints className="text-white w-5 h-5 opacity-75" /> :
+               eq.type === 'hat' ? <HardHat className="text-white w-5 h-5 opacity-75" /> :
+               eq.type === 'armor' ? <Shield className="text-white w-5 h-5 opacity-75" /> :
+               eq.type === 'ring' ? <Disc className="text-white w-5 h-5 opacity-75" /> :
+               eq.type === 'belt' ? <GripHorizontal className="text-white w-5 h-5 opacity-75" /> :
+               <Sparkles className="text-white w-5 h-5 opacity-75" />}
+            </div>
             <div className="text-xs font-bold uppercase truncate">{eq.name}</div>
             <div className="text-[10px] text-zinc-500 mt-1 uppercase tracking-widest">{eq.typeName}</div>
             <div className="mt-3 text-[10px] flex flex-col gap-1 text-zinc-400">

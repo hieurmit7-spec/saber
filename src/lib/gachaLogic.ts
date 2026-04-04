@@ -42,7 +42,7 @@ export function generateEquipment(rarity: Equipment['rarity'], forceType?: Equip
   };
 }
 
-export function performGachaRolls(count: number, currentPity: number) {
+export function performGachaRolls(count: number, currentPity: number, currentBanner: 'saber' | 'sasuke' = 'saber') {
   let pity = currentPity;
   const equipments = [];
   const shards = [];
@@ -51,19 +51,14 @@ export function performGachaRolls(count: number, currentPity: number) {
   for (let i = 0; i < count; i++) {
     pity++;
     
-    // Hard Pity 50: random rainbow weapon or HERO (Saber/Sasuke)
+    // Hard Pity 50: Guaranteed Hero based on Banner
     if (pity >= 50) {
-      const r = Math.random();
-      if (r < 0.25) {
-        shards.push({ character_id: 'saber', amount: 10 });
-        results.push({ type: 'character', item: { id: 'saber', name: 'Saber Shards x10', rarity: 'gold' } });
-      } else if (r < 0.5) {
+      if (currentBanner === 'sasuke') {
         shards.push({ character_id: 'sasuke', amount: 10 });
         results.push({ type: 'character', item: { id: 'sasuke', name: 'Sasuke Shards x10', rarity: 'gold' } });
       } else {
-        const eq = generateEquipment('rainbow');
-        equipments.push(eq);
-        results.push({ type: 'equipment', item: eq });
+        shards.push({ character_id: 'saber', amount: 10 });
+        results.push({ type: 'character', item: { id: 'saber', name: 'Saber Shards x10', rarity: 'gold' } });
       }
       pity = 0;
     } else {
