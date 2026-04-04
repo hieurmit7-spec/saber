@@ -262,20 +262,6 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
     const targets = currentEntity.isEnemy ? alivePlayers : aliveEnemies;
     const target = targets[Math.floor(Math.random() * targets.length)];
 
-    // ── SABER ULTIMATE ──
-    if (currentEntity.baseId === 'saber' && !currentEntity.isEnemy && currentEntity.heat >= 100) {
-      setActiveUltCharacter('saber');
-      setIsCastingUlt(true);
-      return;
-    }
-
-    // ── SASUKE ULTIMATE ──
-    if (currentEntity.baseId === 'sasuke' && !currentEntity.isEnemy && currentEntity.heat >= 100) {
-      setActiveUltCharacter('sasuke');
-      setIsCastingUlt(true);
-      return;
-    }
-
     // ── NORMAL ATTACK ──
     let baseDmg = currentEntity.dmg;
     let armorPiercing = 0; // fraction of enemy armor to ignore
@@ -305,24 +291,46 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
     }, 200 / speedMult);
 
     setTimeout(() => {
-      // Sasuke attacker: gain 20 Chakra from Chidori
-      if (currentEntity.baseId === 'sasuke' && !currentEntity.isEnemy) {
-        setCombatants(prev => prev.map(c => {
+      // --- Heat / Chakra gain (BOTH player AND enemy) ---
+      let pendingUlt: 'saber' | 'sasuke' | null = null;
+
+      setCombatants(prev => {
+        const next = prev.map(c => {
           if (c.id !== currentEntity.id) return c;
-          return { ...c, heat: Math.min(100, c.heat + 20) };
-        }));
-      }
-      // Saber attacker: gain heat from attack
-      if (currentEntity.baseId === 'saber' && !currentEntity.isEnemy) {
-        setCombatants(prev => prev.map(c => {
-          if (c.id !== currentEntity.id) return c;
-          const heatGain = 15;
-          return { ...c, heat: Math.min(100, c.heat + heatGain) };
-        }));
-      }
+
+          // Sasuke: Chidori gains +20 Chakra
+          if (c.baseId === 'sasuke') {
+            const newHeat = Math.min(100, c.heat + 20);
+            // Only trigger ult for player Sasuke
+            if (!c.isEnemy && newHeat >= 100) pendingUlt = 'sasuke';
+            return { ...c, heat: newHeat };
+          }
+
+          // Saber: gains heat on attack
+          if (c.baseId === 'saber') {
+            const newHeat = Math.min(100, c.heat + 15);
+            // Only trigger ult for player Saber
+            if (!c.isEnemy && newHeat >= 100) pendingUlt = 'saber';
+            return { ...c, heat: newHeat };
+          }
+
+          return c;
+        });
+        return next;
+      });
+
       handleDamage(target.id, finalDmg, currentEntity);
       setActiveAttacker(null);
-      setCurrentTurnIdx(p => (p + 1) % turnOrder.length);
+
+      // Trigger ultimate AFTER state is set, with a tiny delay so React flushes
+      if (pendingUlt) {
+        setTimeout(() => {
+          setActiveUltCharacter(pendingUlt!);
+          setIsCastingUlt(true);
+        }, 50);
+      } else {
+        setCurrentTurnIdx(p => (p + 1) % turnOrder.length);
+      }
     }, 500 / speedMult);
   };
 
