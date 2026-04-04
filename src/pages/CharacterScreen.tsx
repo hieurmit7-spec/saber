@@ -93,8 +93,12 @@ export default function CharacterScreen() {
           </div>
 
           <div className="w-[400px] h-[500px] mt-24 relative flex items-center justify-center pointer-events-none">
-            {isSaber ? (
-              <img src="/videos/saber-avatar.gif" className="h-full object-cover mix-blend-screen opacity-90 filter contrast-125 rounded-3xl" />
+            {activeChar.videoAvatar ? (
+              <img 
+                src={activeChar.videoAvatar} 
+                className="h-full object-cover mix-blend-screen opacity-90 filter contrast-125 rounded-3xl" 
+                alt={activeChar.name}
+              />
             ) : (
               <div className="text-zinc-700 text-6xl font-black uppercase blur-[2px]">{activeChar.name}</div>
             )}

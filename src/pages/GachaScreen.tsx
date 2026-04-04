@@ -124,7 +124,7 @@ export default function GachaScreen() {
 
       <div className="absolute top-32 left-1/2 -translate-x-1/2 z-10 text-center w-full max-w-4xl">
         <h1 className="text-7xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-amber-100 via-amber-400 to-amber-700 drop-shadow-2xl">
-          SABER ARCHIVE
+          HERO ARCHIVE
         </h1>
         <p className="mt-4 text-sm font-bold bg-black/40 backdrop-blur-md px-6 py-2 inline-flex border border-white/10 shadow-lg items-center gap-2">
           PITY RATE: <span className="text-amber-400 text-xl">{pityCounter}/50</span>
@@ -155,7 +155,15 @@ export default function GachaScreen() {
                     {res.type === 'character' ? (
                       <>
                         <div className="w-16 h-16 mb-3 overflow-hidden border border-amber-500/50 p-1 bg-black">
-                          {res.item.id === 'saber' ? <img src="/videos/saber-avatar.gif" className="w-full h-full object-cover blur-[0.5px] saturate-150" /> : null}
+                          {res.item.id === 'sasuke' ? (
+                            <img src="/videos/sasuke.gif" className="w-full h-full object-cover saturate-150" />
+                          ) : res.item.id === 'saber' ? (
+                            <img src="/videos/saber-avatar.gif" className="w-full h-full object-cover saturate-150" />
+                          ) : (
+                            <div className="w-full h-full bg-zinc-900 flex items-center justify-center text-zinc-600 font-black text-xs uppercase">
+                              {res.item.id[0]}
+                            </div>
+                          )}
                         </div>
                         <span className="font-bold text-amber-500 text-center leading-none text-sm uppercase tracking-wider">{res.item.name}</span>
                       </>

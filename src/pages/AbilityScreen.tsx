@@ -78,8 +78,8 @@ export default function AbilityScreen() {
             {/* Hero Header */}
             <div className="flex items-end gap-6 mb-12 pb-8 border-b border-white/5">
               <div className="w-20 h-20 overflow-hidden shrink-0 border border-white/10">
-                {activeChar.id === 'saber' ? (
-                  <img src="/videos/saber-avatar.gif" className="w-full h-full object-cover" />
+                {activeChar.videoAvatar ? (
+                  <img src={activeChar.videoAvatar} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full bg-zinc-900 flex items-center justify-center text-zinc-600 font-black text-2xl uppercase">
                     {activeChar.name[0]}

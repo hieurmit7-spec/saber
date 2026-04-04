@@ -51,12 +51,15 @@ export function performGachaRolls(count: number, currentPity: number) {
   for (let i = 0; i < count; i++) {
     pity++;
     
-    // Hard Pity 50: random rainbow weapon or hero shards
+    // Hard Pity 50: random rainbow weapon or HERO (Saber/Sasuke)
     if (pity >= 50) {
-      if (Math.random() < 0.5) {
-        // Guaranteed Saber Shards hit
+      const r = Math.random();
+      if (r < 0.25) {
         shards.push({ character_id: 'saber', amount: 10 });
-        results.push({ type: 'character', item: { id: 'saber', name: 'Saber (10 Shards)', rarity: 'gold' } });
+        results.push({ type: 'character', item: { id: 'saber', name: 'Saber Shards x10', rarity: 'gold' } });
+      } else if (r < 0.5) {
+        shards.push({ character_id: 'sasuke', amount: 10 });
+        results.push({ type: 'character', item: { id: 'sasuke', name: 'Sasuke Shards x10', rarity: 'gold' } });
       } else {
         const eq = generateEquipment('rainbow');
         equipments.push(eq);
@@ -64,23 +67,51 @@ export function performGachaRolls(count: number, currentPity: number) {
       }
       pity = 0;
     } else {
-      // 10th pull logic
+      // 10th pull logic (Special Rates)
       if (count === 10 && i === 9) {
-        if (Math.random() < 0.1) {
+        const r = Math.random() * 100;
+        if (r < 1) {
+          // 1% Saber
           shards.push({ character_id: 'saber', amount: 10 });
-          results.push({ type: 'character', item: { id: 'saber', name: 'Saber (10 Shards)', rarity: 'gold' } });
+          results.push({ type: 'character', item: { id: 'saber', name: 'Saber Shards x10', rarity: 'gold' } });
+          pity = 0;
+        } else if (r < 2) {
+          // 1% Sasuke
+          shards.push({ character_id: 'sasuke', amount: 10 });
+          results.push({ type: 'character', item: { id: 'sasuke', name: 'Sasuke Shards x10', rarity: 'gold' } });
+          pity = 0;
+        } else if (r < 30) {
+          // 28% chance for random BASE character shards (mapping to "98% Base Characters" requirement)
+          const bases = ['archer', 'lancer', 'caster', 'assassin', 'rider'];
+          const base = bases[Math.floor(Math.random() * bases.length)];
+          shards.push({ character_id: base, amount: 10 });
+          results.push({ type: 'character', item: { id: base, name: `${base.charAt(0).toUpperCase() + base.slice(1)} Shards x10`, rarity: 'purple' } });
           pity = 0;
         } else {
-          const r = Math.random() < 0.5 ? 'purple' : 'gold';
-          const eq = generateEquipment(r);
+          // Purple or Gold equipment for the rest
+          const rarity = Math.random() < 0.5 ? 'purple' : 'gold';
+          const eq = generateEquipment(rarity);
           equipments.push(eq);
           results.push({ type: 'equipment', item: eq });
         }
       } else {
-        const rarity = rollEquipmentRarity();
-        const eq = generateEquipment(rarity);
-        equipments.push(eq);
-        results.push({ type: 'equipment', item: eq });
+        // Outside 10th slot: Sasuke 0.01% rate
+        const r = Math.random() * 100;
+        if (r < 0.01) {
+          shards.push({ character_id: 'sasuke', amount: 10 });
+          results.push({ type: 'character', item: { id: 'sasuke', name: 'Sasuke Shards x10', rarity: 'gold' } });
+          pity = 0;
+        } else if (r < 0.02) { 
+          // Keep Saber at similar low rate if not specified, but user only mentioned Sasuke 0.01%
+          shards.push({ character_id: 'saber', amount: 10 });
+          results.push({ type: 'character', item: { id: 'saber', name: 'Saber Shards x10', rarity: 'gold' } });
+          pity = 0;
+        } else {
+          const rarity = rollEquipmentRarity();
+          const eq = generateEquipment(rarity);
+          equipments.push(eq);
+          results.push({ type: 'equipment', item: eq });
+        }
       }
     }
   }

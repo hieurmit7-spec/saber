@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getPlayerInfo, getPlayerCharacters, equipItemToCharacter, upgradeCharacterStar } from '@/services/playerService';
 import { getInventory } from '@/services/equipmentService';
 import { rollGachaRPC } from '@/services/gachaService';
-import { SABER, BASE_CHARACTERS } from '@/constants/gameData';
+import { SABER, SASUKE, BASE_CHARACTERS } from '@/constants/gameData';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
 
@@ -36,7 +36,7 @@ export const useHydratedCharacters = (userId: string) => {
 
   const characters = useMemo(() => {
     if (!dbChars || !inventory) return [];
-    return [SABER, ...BASE_CHARACTERS].map(baseChar => {
+    return [SABER, SASUKE, ...BASE_CHARACTERS].map(baseChar => {
       const dbInfo = dbChars.find((c: any) => c.character_id === baseChar.id);
       
       const hydratedEquipments = {

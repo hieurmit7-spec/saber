@@ -19,6 +19,44 @@ export const SABER: GameCharacter = {
   darknessStacks: 0,
 };
 
+export const SASUKE: GameCharacter = {
+  id: 'sasuke',
+  name: 'Sasuke',
+  class: 'Sát thủ',
+  stars: 1,
+  shards: 0,
+  level: 1,
+  baseStats: { hp: 800, speed: 100, armor: 800, dmg: 250 },
+  equipment: { shoes: null, hat: null, armor: null, ring: null, belt: null, artifact: null },
+  skills: [
+    {
+      id: 1,
+      name: 'Chidori',
+      description: 'Active: Deals 250% ATK damage to 1 enemy. Generates 20 Chakra.\n[2★] Ignores 30% of enemy Armor.',
+      cooldown: 0,
+      type: 'active',
+    },
+    {
+      id: 2,
+      name: 'Sharingan Foresight',
+      description: 'Passive: 20% Dodge Rate — evade attacks entirely, taking 0 damage. On successful dodge: gain 30 Chakra.\n[2★] Dodge Rate → 30%.\n[6★] Dodge Rate → 40%.',
+      cooldown: 0,
+      type: 'passive',
+    },
+    {
+      id: 3,
+      name: 'Susanoo Manifestation',
+      description: 'Ultimate: Requires 100 Chakra. Deals 350% ATK to ALL enemies. Grants Susanoo Shield = 40% Max HP (blocks damage, immune to debuffs).\n[4★] Damage → 450% ATK. Shield reflects 20% incoming damage.\n[6★] IZANAGI — On fatal damage: dodge death, revive at 50% HP, clear all debuffs (once per battle).',
+      cooldown: 0,
+      type: 'ultimate',
+    },
+  ],
+  videoAvatar: '/videos/sasuke.gif',
+  videoBanner: '/videos/sasuke ultimate.mp4',
+};
+
+
+
 export const BASE_CHARACTERS: Omit<GameCharacter, 'equipment'>[] = [
   {
     id: 'archer', name: 'Archer', class: 'Cung thủ', stars: 1, shards: 0, level: 1,

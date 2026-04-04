@@ -10,7 +10,10 @@ import { useHydratedCharacters } from "@/hooks/usePlayerData";
 interface CombatEntity {
   id: string; baseId: string; name: string; isEnemy: boolean;
   maxHp: number; hp: number; speed: number; dmg: number; armor: number;
-  heat: number; position: number; state: 'idle' | 'attacking' | 'dead';
+  heat: number;          // Saber = heat bar | Sasuke = chakra bar
+  shield: number;        // Sasuke Susanoo shield
+  izanagiUsed: boolean;  // Sasuke 6★ once-per-battle
+  position: number; state: 'idle' | 'attacking' | 'dead';
   stars: number;
 }
 
@@ -31,6 +34,7 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
   const [currentTurnIdx, setCurrentTurnIdx] = useState(0);
   const [speedMult, setSpeedMult] = useState(1);
   const [isCastingUlt, setIsCastingUlt] = useState(false);
+  const [activeUltCharacter, setActiveUltCharacter] = useState<'saber' | 'sasuke' | null>(null);
   const [ultText, setUltText] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -122,17 +126,15 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
   };
 
   const generateEnemyTeam = (): CombatEntity[] => {
-    // Generate AI logic based on mode and pveLevel
-    let mult = mode === 'pve' ? pveLevel : 5; // Ranked/Private base stat mult
+    let mult = mode === 'pve' ? pveLevel : 5;
     const list: CombatEntity[] = [];
 
     if (mode === 'pve' && pveLevel === 7) {
-      list.push({ id: 'e0', baseId: 'boss_dragon', name: 'Nhện Chú Vương', isEnemy: true, maxHp: 5000, hp: 5000, speed: 100, dmg: 400, armor: 1000, heat: 0, position: 2, state: 'idle', stars: 6 });
+      list.push({ id: 'e0', baseId: 'boss_dragon', name: 'Nhện Chú Vương', isEnemy: true, maxHp: 5000, hp: 5000, speed: 100, dmg: 400, armor: 1000, heat: 0, shield: 0, izanagiUsed: false, position: 2, state: 'idle', stars: 6 });
       return list;
     }
-
-    list.push({ id: 'e1', baseId: 'goblin', name: 'Thích Khách', isEnemy: true, maxHp: 500 * mult, hp: 500 * mult, speed: 80, dmg: 100 * mult, armor: 200 * mult, heat: 0, position: 0, state: 'idle', stars: 1 });
-    list.push({ id: 'e2', baseId: 'slime', name: 'Ma Vật', isEnemy: true, maxHp: 800 * mult, hp: 800 * mult, speed: 60, dmg: 80 * mult, armor: 300 * mult, heat: 0, position: 2, state: 'idle', stars: 1 });
+    list.push({ id: 'e1', baseId: 'goblin', name: 'Thích Khách', isEnemy: true, maxHp: 500 * mult, hp: 500 * mult, speed: 80, dmg: 100 * mult, armor: 200 * mult, heat: 0, shield: 0, izanagiUsed: false, position: 0, state: 'idle', stars: 1 });
+    list.push({ id: 'e2', baseId: 'slime', name: 'Ma Vật', isEnemy: true, maxHp: 800 * mult, hp: 800 * mult, speed: 60, dmg: 80 * mult, armor: 300 * mult, heat: 0, shield: 0, izanagiUsed: false, position: 2, state: 'idle', stars: 1 });
     return list;
   };
 
@@ -158,7 +160,23 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
   const launchCombat = () => {
     const players: CombatEntity[] = playerTeam.map((c, idx) => {
       if (!c) return null;
-      return { id: `p_${idx}`, baseId: c.id, name: c.name, isEnemy: false, maxHp: c.baseStats.hp, hp: c.baseStats.hp, speed: c.baseStats.speed, dmg: c.baseStats.dmg, armor: c.baseStats.armor, heat: 0, position: idx, state: 'idle', stars: c.stars };
+      return {
+        id: `p_${idx}`,
+        baseId: c.id,
+        name: c.name,
+        isEnemy: false,
+        maxHp: c.baseStats.hp,
+        hp: c.baseStats.hp,
+        speed: c.baseStats.speed,
+        dmg: c.baseStats.dmg,
+        armor: c.baseStats.armor,
+        heat: 0,       // Saber: heat | Sasuke: chakra
+        shield: 0,     // Sasuke Susanoo Shield
+        position: idx,
+        state: 'idle',
+        stars: c.stars,
+        izanagiUsed: false, // Sasuke 6★ once-per-battle
+      };
     }).filter(Boolean) as CombatEntity[];
 
     const enemies = generateEnemyTeam();
@@ -175,8 +193,8 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
     const aliveEnemies = combatants.filter(c => c.isEnemy && c.hp > 0);
 
     if (alivePlayers.length === 0) {
-      if (mode === 'ranked') toast.error("Thất bại! -1 Sao hạng.");
-      else toast.error("Đội bạn đã bị tiêu diệt!");
+      if (mode === 'ranked') toast.error('Thất bại! -1 Sao hạng.');
+      else toast.error('Đội bạn đã bị tiêu diệt!');
       setTimeout(() => navigate('/battle'), 2000);
       return;
     }
@@ -189,9 +207,9 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
         })();
         toast.success(`Chiến Thắng PvE! Nhận ${kcReward} KC & 1 Genesis Core.`);
       } else if (mode === 'ranked') {
-        toast.success("Chiến Thắng Xếp Hạng! +1 Sao hạng.");
+        toast.success('Chiến Thắng Xếp Hạng! +1 Sao hạng.');
       } else {
-        toast.success("Chiến thắng phòng kín!");
+        toast.success('Chiến thắng phòng kín!');
       }
       setTimeout(() => navigate('/battle'), 3000);
       return;
@@ -207,7 +225,9 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
     const targets = currentEntity.isEnemy ? alivePlayers : aliveEnemies;
     const target = targets[Math.floor(Math.random() * targets.length)];
 
-    if (currentEntity.baseId === 'saber' && currentEntity.heat >= 100) {
+    // ── SABER ULTIMATE ──
+    if (currentEntity.baseId === 'saber' && !currentEntity.isEnemy && currentEntity.heat >= 100) {
+      setActiveUltCharacter('saber');
       setIsCastingUlt(true);
       if (videoRef.current) {
         videoRef.current.currentTime = 0;
@@ -218,49 +238,119 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
       return;
     }
 
-    const baseDmg = currentEntity.baseId === 'saber' ? 200 : currentEntity.dmg;
-    const finalDmg = Math.max(1, Math.floor(baseDmg * (1 - (target.armor / (target.armor + 1000)))));
+    // ── SASUKE ULTIMATE ──
+    if (currentEntity.baseId === 'sasuke' && !currentEntity.isEnemy && currentEntity.heat >= 100) {
+      setActiveUltCharacter('sasuke');
+      setIsCastingUlt(true);
+      if (videoRef.current) {
+        videoRef.current.currentTime = 0;
+        videoRef.current.muted = false;
+        videoRef.current.playbackRate = speedMult;
+        videoRef.current.play();
+      }
+      return;
+    }
 
-    // VFX 3-Step Sequence Orchestration
-    setActiveAttacker({ 
-      id: currentEntity.id, 
-      attackerPos: currentEntity.position, 
-      targetPos: target.position, 
-      isEnemy: currentEntity.isEnemy, 
-      targetIsEnemy: target.isEnemy 
+    // ── NORMAL ATTACK ──
+    let baseDmg = currentEntity.dmg;
+    let armorPiercing = 0; // fraction of enemy armor to ignore
+
+    if (currentEntity.baseId === 'sasuke' && currentEntity.stars >= 2) {
+      armorPiercing = 0.3; // Chidori 2★: ignore 30% armor
+    }
+
+    const effectiveArmor = target.armor * (1 - armorPiercing);
+    // Chidori deals 250% ATK
+    const dmgMultiplier = currentEntity.baseId === 'sasuke' ? 2.5 : 1.0;
+    const finalDmg = Math.max(1, Math.floor(baseDmg * dmgMultiplier * (1 - effectiveArmor / (effectiveArmor + 1000))));
+
+    // VFX 3-Step Sequence
+    setActiveAttacker({
+      id: currentEntity.id,
+      attackerPos: currentEntity.position,
+      targetPos: target.position,
+      isEnemy: currentEntity.isEnemy,
+      targetIsEnemy: target.isEnemy
     });
 
     setTimeout(() => {
-      // Step 2: Impact (Slash + Flashing target + Floating text)
       setSlashTargetId(target.id);
       setFloatingTexts(prev => [...prev, { id: Math.random().toString(), targetId: target.id, dmg: finalDmg }]);
-      
-      setTimeout(() => setSlashTargetId(null), 150); // Flash slash quickly
+      setTimeout(() => setSlashTargetId(null), 150);
     }, 200 / speedMult);
 
     setTimeout(() => {
-      // Step 3: Return & End Turn
-      handleDamage(target.id, finalDmg);
+      // Sasuke attacker: gain 20 Chakra from Chidori
+      if (currentEntity.baseId === 'sasuke' && !currentEntity.isEnemy) {
+        setCombatants(prev => prev.map(c => {
+          if (c.id !== currentEntity.id) return c;
+          return { ...c, heat: Math.min(100, c.heat + 20) };
+        }));
+      }
+      // Saber attacker: gain heat from attack
+      if (currentEntity.baseId === 'saber' && !currentEntity.isEnemy) {
+        setCombatants(prev => prev.map(c => {
+          if (c.id !== currentEntity.id) return c;
+          const heatGain = 15;
+          return { ...c, heat: Math.min(100, c.heat + heatGain) };
+        }));
+      }
+      handleDamage(target.id, finalDmg, currentEntity);
       setActiveAttacker(null);
       setCurrentTurnIdx(p => (p + 1) % turnOrder.length);
     }, 500 / speedMult);
   };
 
-  const handleDamage = (targetId: string, dmg: number) => {
+  const handleDamage = (targetId: string, dmg: number, attacker?: any) => {
     setCombatants(prev => prev.map(c => {
       if (c.id !== targetId) return c;
-      const newHp = Math.max(0, c.hp - dmg);
+
+      // ── SASUKE: Sharingan Dodge ──
+      if (c.baseId === 'sasuke' && !c.isEnemy) {
+        const dodgeRate = c.stars >= 6 ? 0.40 : c.stars >= 2 ? 0.30 : 0.20;
+        if (Math.random() < dodgeRate) {
+          // Dodge success! Gain 30 Chakra
+          toast(`⚡ Sasuke né tránh! +30 Chakra`, { duration: 1200 });
+          return { ...c, heat: Math.min(100, c.heat + 30) };
+        }
+      }
+
+      // ── SASUKE: Susanoo Shield absorbs damage ──
+      let remainingDmg = dmg;
+      let newShield = c.shield || 0;
+      if (c.baseId === 'sasuke' && newShield > 0) {
+        const absorbed = Math.min(newShield, remainingDmg);
+        newShield -= absorbed;
+        remainingDmg -= absorbed;
+
+        // Shield reflect 20% if 4★
+        if (c.stars >= 4 && attacker && absorbed > 0) {
+          const reflectDmg = Math.floor(absorbed * 0.2);
+          setCombatants(prev2 => prev2.map(a => a.id === attacker.id ? { ...a, hp: Math.max(0, a.hp - reflectDmg) } : a));
+          toast(`🛡 Susanoo phản chiêu! -${reflectDmg}`, { duration: 1200 });
+        }
+      }
+
+      const newHp = Math.max(0, c.hp - remainingDmg);
+
+      // ── SASUKE 6★ IZANAGI: Death defiance ──
+      if (c.baseId === 'sasuke' && newHp === 0 && c.stars >= 6 && !c.izanagiUsed) {
+        toast('⚡ IZANAGI — Sasuke viết lại thực tại!', { duration: 2000 });
+        return { ...c, hp: Math.floor(c.maxHp * 0.5), shield: 0, izanagiUsed: true };
+      }
+
+      // ── SABER: heat gain when hit ──
       let newHeat = c.heat;
       if (c.baseId === 'saber' && newHp > 0) {
         const pctLost = (dmg / c.maxHp) * 100;
-        const heatRates = [1.5, 1.5, 2.0, 2.0, 2.5, 2.5, 3.0]; // by star level (0 to 6)
-        const rate = heatRates[c.stars] || 1.5;
-        newHeat = Math.min(100, c.heat + (pctLost * rate));
+        const heatRates = [1.5, 1.5, 2.0, 2.0, 2.5, 2.5, 3.0];
+        const rate = heatRates[Math.min(c.stars, 6)] || 1.5;
+        newHeat = Math.min(100, c.heat + pctLost * rate);
       } else if (c.baseId === 'saber' && newHp === 0 && c.stars === 6 && c.heat !== -1) {
-        // Death Defy logic for 6 star (set heat to -1 to mark as used)
         return { ...c, hp: 1, heat: -1 };
       }
-      return { ...c, hp: newHp, heat: newHeat };
+
+      return { ...c, hp: newHp, heat: newHeat, shield: newShield };
     }));
   };
 
@@ -270,20 +360,35 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
 
     setCombatants(prev => {
       const nextState = [...prev];
-      const saber = nextState.find(c => c.baseId === 'saber' && !c.isEnemy);
-      if (saber) {
-        saber.heat = saber.heat === -1 ? -1 : 0; // reset heat unless defy flag used
-        // apply mock JSON logic standard
-        setUltText("Saber Ultimate!");
-        setTimeout(() => setUltText(""), 2000);
 
-        const dmgAmt = saber.dmg * 4;
-        nextState.forEach(c => {
-          if (c.isEnemy) c.hp = Math.max(0, c.hp - dmgAmt);
-        });
+      // ── SABER ULTIMATE: Excalibur ──
+      const saber = nextState.find(c => c.baseId === 'saber' && !c.isEnemy);
+      if (saber && activeUltCharacter === 'saber') {
+        saber.heat = saber.heat === -1 ? -1 : 0;
+        setUltText('⚔ EXCALIBUR!');
+        setTimeout(() => setUltText(''), 2000);
+        const dmgAmt = Math.floor(saber.dmg * 4);
+        nextState.forEach(c => { if (c.isEnemy) c.hp = Math.max(0, c.hp - dmgAmt); });
       }
+
+      // ── SASUKE ULTIMATE: Susanoo ──
+      const sasuke = nextState.find(c => c.baseId === 'sasuke' && !c.isEnemy);
+      if (sasuke && activeUltCharacter === 'sasuke') {
+        sasuke.heat = 0;
+        const multByStars = sasuke.stars >= 4 ? 4.5 : 3.5;
+        const dmgAmt = Math.floor(sasuke.dmg * multByStars);
+        nextState.forEach(c => { if (c.isEnemy) c.hp = Math.max(0, c.hp - dmgAmt); });
+
+        // Grant Susanoo Shield = 40% max HP
+        const shieldAmt = Math.floor(sasuke.maxHp * 0.4);
+        sasuke.shield = shieldAmt;
+        setUltText(`⚡ SUSANOO! Shield: ${shieldAmt}`);
+        setTimeout(() => setUltText(''), 2500);
+      }
+
       return nextState;
     });
+    setActiveUltCharacter(null);
     setCurrentTurnIdx(p => (p + 1) % turnOrder.length);
   };
 
@@ -359,7 +464,12 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
               <div className="space-y-2">
                 {characters.map(c => (
                   <div key={c.id} onClick={() => setSelectedRosterId(c.id)} className={`p-3 rounded-lg flex items-center gap-3 cursor-pointer ${selectedRosterId === c.id ? 'bg-amber-600' : 'bg-zinc-800'}`}>
-                    <div className="w-10 h-10 border rounded-full overflow-hidden"><img src={c.id === 'saber' ? "/videos/saber-avatar.gif" : ""} className="w-full h-full object-cover" /></div>
+                    <div className="w-10 h-10 border rounded-full overflow-hidden bg-black/40">
+                      <img 
+                        src={c.id === 'sasuke' ? "/videos/sasuke.gif" : c.id === 'saber' ? "/videos/saber-avatar.gif" : ""} 
+                        className="w-full h-full object-cover" 
+                      />
+                    </div>
                     <div><div className="font-bold">{c.name}</div><div className="text-xs">Dmg: {c.baseStats.dmg} | {"★".repeat(c.stars)}</div></div>
                   </div>
                 ))}
@@ -392,8 +502,16 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
 
       {/* Video Overlay Ultimates */}
       <div className={`absolute inset-0 z-50 bg-black transition-opacity duration-500 ${isCastingUlt ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-        <video ref={videoRef} className="w-full h-full object-cover" onEnded={finishUltimate}>
-          <source src="/videos/banner-ulti.mp4" type="video/mp4" />
+        <video 
+          key={activeUltCharacter}
+          ref={videoRef} 
+          className="w-full h-full object-cover" 
+          onEnded={finishUltimate}
+        >
+          <source 
+            src={activeUltCharacter === 'sasuke' ? "/videos/sasuke ultimate.mp4" : "/videos/banner-ulti.mp4"} 
+            type="video/mp4" 
+          />
         </video>
       </div>
     </div>
@@ -438,10 +556,23 @@ function CombatGrid({ row, combatants, activeAttacker, slashTargetId, floatingTe
               </div>
             ))}
             
-            <span className={`text-sm font-black mb-1 ${c.isEnemy ? 'text-red-500' : 'text-blue-400'}`}>{c.name}</span>
-            <div className={`w-24 h-24 rounded-lg bg-black border-2 border-zinc-700 shadow-xl overflow-hidden flex items-center justify-center relative transition-all duration-100 ${flashClass}`}>
-              {c.baseId === 'saber' && c.hp > 0 ? <img src="/videos/saber-avatar.gif" className="w-full h-full object-cover" /> : <div className="text-4xl">{c.isEnemy ? '👹' : '😎'}</div>}
+            <div className="flex items-center gap-1 mb-1">
+              <span className={`text-[10px] font-black uppercase tracking-widest ${c.isEnemy ? 'text-red-500' : 'text-zinc-400'}`}>{c.name}</span>
+              {c.shield > 0 && <span className="bg-blue-500 text-[8px] px-1 rounded-sm text-white font-bold">SHIELD</span>}
+            </div>
+
+            <div className={`w-24 h-24 rounded-lg bg-black border-2 transition-all duration-100 relative overflow-hidden flex items-center justify-center ${flashClass} ${c.shield > 0 ? 'border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'border-zinc-800'}`}>
+              <img 
+                src={c.baseId === 'sasuke' ? "/videos/sasuke.gif" : c.baseId === 'saber' ? "/videos/saber-avatar.gif" : ""} 
+                className={`w-full h-full object-cover ${c.hp <= 0 ? 'grayscale' : ''}`} 
+              />
+              {!c.baseId.match(/saber|sasuke/) && <div className="text-4xl">{c.isEnemy ? '👹' : '😎'}</div>}
               
+              {/* Susanoo Aura Overlay */}
+              {c.baseId === 'sasuke' && c.shield > 0 && (
+                <div className="absolute inset-0 bg-cyan-500/10 pointer-events-none mix-blend-overlay" />
+              )}
+
               {/* Slash VFX */}
               {isHit && (
                 <div className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none">
@@ -450,9 +581,27 @@ function CombatGrid({ row, combatants, activeAttacker, slashTargetId, floatingTe
               )}
             </div>
             
-            <div className="w-full h-3 bg-zinc-900 mt-2 border"><div className="h-full bg-red-600 transition-all" style={{ width: `${hpPct}%` }} /></div>
-            {c.baseId === 'saber' && (
-              <div className="w-full h-2 bg-black mt-1 border"><div className="h-full bg-orange-500 transition-all" style={{ width: `${c.heat}%` }} /></div>
+            {/* HP Bar */}
+            <div className="w-full h-3 bg-zinc-900 mt-2 border relative border-zinc-800">
+               {/* Base HP */}
+              <div className="h-full bg-red-600 transition-all duration-300" style={{ width: `${hpPct}%` }} />
+              {/* Susanoo Shield Overlay */}
+              {c.shield > 0 && (
+                <div 
+                  className="absolute top-0 right-0 h-full bg-cyan-400 opacity-70 transition-all duration-300" 
+                  style={{ width: `${Math.min(100, (c.shield / c.maxHp) * 100)}%` }} 
+                />
+              )}
+            </div>
+
+            {/* Energy Bar (Heat/Chakra) */}
+            {(c.baseId === 'saber' || c.baseId === 'sasuke') && (
+              <div className="w-full h-2 bg-black mt-1 border border-zinc-800">
+                <div 
+                  className={`h-full transition-all duration-500 ${c.baseId === 'sasuke' ? 'bg-gradient-to-r from-purple-500 to-cyan-400 shadow-[0_0_5px_rgba(168,85,247,0.5)]' : 'bg-orange-500'}`} 
+                  style={{ width: `${c.heat}%` }} 
+                />
+              </div>
             )}
           </div>
         );
