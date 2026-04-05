@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getPlayerInfo, getPlayerCharacters, equipItemToCharacter, upgradeCharacterStar, updateTeamSetup, getLeaderboard, getArenaOpponents, updatePlayerProfile } from '@/services/playerService';
-import { getInventory } from '@/services/equipmentService';
+import { getPlayerInfo, getPlayerCharacters, equipItemToCharacter, upgradeCharacterStar, updateTeamSetup, getLeaderboard, getArenaOpponents, updatePlayerProfile, upgradeEquipment } from '@/services/playerService';
+import { getInventory, getPlayerMaterials } from '@/services/equipmentService';
 import { rollGachaRPC } from '@/services/gachaService';
-import { SABER, SASUKE, BASE_CHARACTERS } from '@/constants/gameData';
+import { SABER, SASUKE, PETER, GOJO, FRIEREN, BASE_CHARACTERS } from '@/constants/gameData';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
 
@@ -36,7 +36,7 @@ export const useHydratedCharacters = (userId: string) => {
 
   const characters = useMemo(() => {
     if (!dbChars || !inventory) return [];
-    return [SABER, SASUKE, ...BASE_CHARACTERS].map(baseChar => {
+    return [SABER, SASUKE, PETER, GOJO, FRIEREN, ...BASE_CHARACTERS].map(baseChar => {
       const dbInfo = dbChars.find((c: any) => c.character_id === baseChar.id);
       
       const hydratedEquipments = {
@@ -111,13 +111,18 @@ export const useRollGacha = (userId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ cost, equipments, shards }: { cost: number, equipments: any[], shards: any[] }) =>
-      rollGachaRPC(userId, cost, equipments, shards),
+    mutationFn: ({ cost, equipments, shards, materials }: { cost: number, equipments: any[], shards: any[], materials: any[] }) =>
+      rollGachaRPC(userId, cost, equipments, shards, materials),
     onSuccess: () => {
       // Invalidate everything to refresh currency, inventory, and shards
       queryClient.invalidateQueries({ queryKey: ['player', userId] });
       queryClient.invalidateQueries({ queryKey: ['inventory', userId] });
       queryClient.invalidateQueries({ queryKey: ['characters', userId] });
+      queryClient.invalidateQueries({ queryKey: ['materials', userId] });
+    },
+    onError: (err: any) => {
+      console.error("LỖI GACHA TỪ MÁY CHỦ:", err);
+      toast.error(err.message || 'Lỗi khi lưu Gacha! Hãy kiểm tra console.');
     }
   });
 };
@@ -162,6 +167,26 @@ export const useUpdateProfile = (userId: string) => {
     },
     onError: (error: any) => {
       toast.error(error.message || 'Lỗi lưu hồ sơ!');
+    }
+  });
+};
+export const useMaterials = (userId: string) => {
+  return useQuery({
+    queryKey: ['materials', userId],
+    queryFn: () => getPlayerMaterials(userId),
+    enabled: !!userId,
+  });
+};
+
+export const useUpgradeEquipment = (userId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ equipmentId, stoneId, stonesCount, success }: { equipmentId: string, stoneId: string, stonesCount: number, success: boolean }) =>
+      upgradeEquipment(userId, equipmentId, stonesCount, stoneId, success),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['characters', userId] });
+      queryClient.invalidateQueries({ queryKey: ['materials', userId] });
     }
   });
 };

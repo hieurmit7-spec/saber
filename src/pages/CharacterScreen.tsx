@@ -2,8 +2,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Star, Footprints, HardHat, Shield, Disc, GripHorizontal, Sparkles } from "lucide-react";
 import { useHydratedCharacters, useInventory, useEquipItem, useUpgradeStar } from "@/hooks/usePlayerData";
-import { getCharacterTotalStats, calculateCP } from "@/stores/gameStore";
+import { getCharacterTotalStats, calculateCP, Equipment, STAR_BONUSES_MAP } from "@/stores/gameStore";
 import { toast } from "sonner";
+import { ArrowUpCircle } from "lucide-react";
+import EquipmentUpgradeModal from "@/components/game/EquipmentUpgradeModal";
 
 export default function CharacterScreen() {
   const navigate = useNavigate();
@@ -16,6 +18,7 @@ export default function CharacterScreen() {
 
   const [selectedCharId, setSelectedCharId] = useState('saber');
   const [showEquipSelect, setShowEquipSelect] = useState<{ charId: string; slot: string } | null>(null);
+  const [upgradeTarget, setUpgradeTarget] = useState<Equipment | null>(null);
 
   const activeChar = FULL_CHARACTERS.find(c => c.id === selectedCharId);
 
@@ -45,6 +48,8 @@ export default function CharacterScreen() {
       toast.error('Không đủ mảnh để nâng cấp!');
     }
   };
+
+
 
   if (!activeChar) return null;
 
@@ -105,50 +110,62 @@ export default function CharacterScreen() {
           </div>
 
           {/* Equipment Slots Around Character */}
-          {activeChar.isUnlocked && (
-            <div className="absolute top-48 w-[600px] flex justify-between pointer-events-none">
-              <div className="flex flex-col gap-12 pointer-events-auto">
-                <EquipSlot 
-                  label="Vũ khí" 
-                  item={activeChar.equipment.artifact} 
-                  slotType="artifact"
-                  onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'artifact' })} 
-                />
-                <EquipSlot 
-                  label="Phụ kiện" 
-                  item={activeChar.equipment.ring} 
-                  slotType="ring"
-                  onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'ring' })} 
-                />
-                <EquipSlot 
-                  label="Thắt Lưng" 
-                  item={activeChar.equipment.belt} 
-                  slotType="belt"
-                  onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'belt' })} 
-                />
+          <div className="absolute top-48 w-[600px] flex justify-between pointer-events-none">
+            {!activeChar.isUnlocked && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-auto">
+                <div className="bg-black/80 border border-white/10 px-6 py-3 text-center">
+                  <div className="text-2xl mb-1">🔒</div>
+                  <div className="text-xs text-zinc-400 uppercase tracking-widest">Chưa sở hữu</div>
+                </div>
               </div>
-              <div className="flex flex-col gap-12 pointer-events-auto items-end">
-                <EquipSlot 
-                  label="Mũ" 
-                  item={activeChar.equipment.hat} 
-                  slotType="hat"
-                  onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'hat' })} 
-                />
-                <EquipSlot 
-                  label="Áo Giáp" 
-                  item={activeChar.equipment.armor} 
-                  slotType="armor"
-                  onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'armor' })} 
-                />
-                <EquipSlot 
-                  label="Giày" 
-                  item={activeChar.equipment.shoes} 
-                  slotType="shoes"
-                  onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'shoes' })} 
-                />
-              </div>
+            )}
+            <div className={`flex flex-col gap-12 pointer-events-auto ${!activeChar.isUnlocked ? 'opacity-20 pointer-events-none' : ''}`}>
+              <EquipSlot 
+                label="Vũ khí" 
+                item={activeChar.equipment.artifact} 
+                slotType="artifact"
+                onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'artifact' })} 
+                onUpgrade={setUpgradeTarget}
+              />
+              <EquipSlot 
+                label="Phụ kiện" 
+                item={activeChar.equipment.ring} 
+                slotType="ring"
+                onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'ring' })} 
+                onUpgrade={setUpgradeTarget}
+              />
+              <EquipSlot 
+                label="Thắt Lưng" 
+                item={activeChar.equipment.belt} 
+                slotType="belt"
+                onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'belt' })} 
+                onUpgrade={setUpgradeTarget}
+              />
             </div>
-          )}
+            <div className={`flex flex-col gap-12 pointer-events-auto items-end ${!activeChar.isUnlocked ? 'opacity-20 pointer-events-none' : ''}`}>
+              <EquipSlot 
+                label="Mũ" 
+                item={activeChar.equipment.hat} 
+                slotType="hat"
+                onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'hat' })} 
+                onUpgrade={setUpgradeTarget}
+              />
+              <EquipSlot 
+                label="Áo Giáp" 
+                item={activeChar.equipment.armor} 
+                slotType="armor"
+                onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'armor' })} 
+                onUpgrade={setUpgradeTarget}
+              />
+              <EquipSlot 
+                label="Giày" 
+                item={activeChar.equipment.shoes} 
+                slotType="shoes"
+                onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'shoes' })} 
+                onUpgrade={setUpgradeTarget}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Right Column: Stats & Upgrade */}
@@ -185,19 +202,19 @@ export default function CharacterScreen() {
 
           <div className="flex flex-col gap-2 mt-4 px-3 py-3 bg-white/5 border border-white/10">
              <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">Mô tả Cấp Sao</h3>
-             {activeChar.id === 'sasuke' ? (
-                <div className="text-xs text-zinc-300 space-y-1">
-                  <div><span className="text-amber-500 font-bold min-w-[24px] inline-block">★2</span> Xuyên 30% giáp (Chidori)</div>
-                  <div><span className="text-amber-500 font-bold min-w-[24px] inline-block">★4</span> Susanoo phản 20% sát thương</div>
-                  <div><span className="text-amber-500 font-bold min-w-[24px] inline-block">★6</span> Kích hoạt Izanagi (Hồi sinh 1 lần)</div>
-                </div>
-             ) : activeChar.id === 'saber' ? (
-                <div className="text-xs text-zinc-300 space-y-1">
-                  <div><span className="text-amber-500 font-bold min-w-[24px] inline-block">★2+</span> Tăng tốc độ hồi Darkness</div>
-                  <div><span className="text-amber-500 font-bold min-w-[24px] inline-block">★6</span> Kháng sát thương chí tử (Giữ 1 HP)</div>
-                </div>
+             {(STAR_BONUSES_MAP[activeChar.id] || []).length > 0 ? (
+               <div className="text-xs text-zinc-300 space-y-1">
+                 {STAR_BONUSES_MAP[activeChar.id].map(b => (
+                   <div key={b.stars}>
+                     <span className={`font-bold min-w-[24px] inline-block mr-1 ${
+                       activeChar.stars >= b.stars ? 'text-amber-400' : 'text-zinc-600'
+                     }`}>★{b.stars}</span>
+                     <span className={activeChar.stars >= b.stars ? 'text-zinc-200' : 'text-zinc-600'}>{b.desc}</span>
+                   </div>
+                 ))}
+               </div>
              ) : (
-                <div className="text-xs text-zinc-500 italic">Nhân vật này chưa có mô tả đột phá.</div>
+               <div className="text-xs text-zinc-500 italic">Nhân vật này chưa có mô tả đột phá.</div>
              )}
           </div>
 
@@ -213,13 +230,14 @@ export default function CharacterScreen() {
 
       {/* Equipment Selector Dialog */}
       {showEquipSelect && (
-        <div className="absolute inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-50 animate-in fade-in">
-           <div className="w-[600px] bg-zinc-950 border border-white/10 p-8 shadow-2xl">
+        <div className="absolute inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-50 animate-in fade-in gap-6">
+           {/* Left: Inventory Selection */}
+           <div className="w-[600px] h-[85vh] max-h-[700px] bg-zinc-950 border border-white/10 p-8 shadow-2xl flex flex-col">
              <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-4">
                <h3 className="text-xl font-bold uppercase tracking-widest">KHO LƯU TRỮ VẬT PHẨM</h3>
                <button className="text-zinc-500 hover:text-white uppercase tracking-widest text-xs" onClick={() => setShowEquipSelect(null)}>ĐÓNG</button>
              </div>
-             <div className="grid grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+             <div className="grid grid-cols-2 gap-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
                 {inventory.filter((eq: any) => eq.type === showEquipSelect.slot && 
                   // Lọc những món đồ chưa được ai gắn (Hoặc đang được thằng này gắn)
                   !FULL_CHARACTERS.some((c: any) => c.isUnlocked && c.id !== showEquipSelect.charId && [c.equipment.shoes?.id, c.equipment.hat?.id, c.equipment.armor?.id, c.equipment.ring?.id, c.equipment.belt?.id, c.equipment.artifact?.id].includes(eq.id))
@@ -233,9 +251,9 @@ export default function CharacterScreen() {
                   const getEqScore = (eq: any) => {
                     let score = 0;
                     if (eq.rarity === 'rainbow') score += 100000;
-                    else if (eq.rarity === 'red') score += 10000;
-                    else if (eq.rarity === 'gold') score += 1000;
-                    else if (eq.rarity === 'purple') score += 100;
+                    else if (eq.rarity === 'black') score += 10000;
+                    else if (eq.rarity === 'red') score += 1000;
+                    else if (eq.rarity === 'orange') score += 100;
                     else if (eq.rarity === 'blue') score += 10;
                     score += (eq.stats?.hp || 0) + (eq.stats?.dmg || 0) * 2 + (eq.stats?.speed || 0) * 3 + (eq.stats?.armor || 0);
                     return score;
@@ -251,8 +269,9 @@ export default function CharacterScreen() {
                       className={`text-left p-4 bg-zinc-950/80 border transition-colors hover:bg-zinc-900 ${
                          isEquippedByMe ? 'border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 
                          eq.rarity === 'rainbow' ? 'border-indigo-500/50 hover:border-indigo-400' :
+                         eq.rarity === 'black' ? 'border-zinc-500/50 hover:border-zinc-400 bg-zinc-900' :
                          eq.rarity === 'red' ? 'border-red-500/50 hover:border-red-400' :
-                         eq.rarity === 'gold' ? 'border-amber-500/50 hover:border-amber-400' :
+                         eq.rarity === 'orange' ? 'border-amber-500/50 hover:border-amber-400' :
                          'border-white/5 hover:border-white/20'
                       }`}
                     >
@@ -260,9 +279,9 @@ export default function CharacterScreen() {
                         <div className="flex items-center gap-3">
                            <div className={`w-8 h-8 rounded shrink-0 flex items-center justify-center border border-white/10 ${
                              eq.rarity === 'rainbow' ? 'bg-gradient-to-tr from-red-500 via-emerald-500 to-indigo-500 text-white shadow-[0_0_10px_rgba(255,255,255,0.5)]' :
+                             eq.rarity === 'black' ? 'bg-zinc-950 text-white border-zinc-500 shadow-[0_0_5px_rgba(255,255,255,0.2)]' :
                              eq.rarity === 'red' ? 'bg-red-900 text-red-100 border-red-500' :
-                             eq.rarity === 'gold' ? 'bg-amber-900 text-amber-100 border-amber-500' :
-                             eq.rarity === 'purple' ? 'bg-purple-900 text-purple-100 border-purple-500' :
+                             eq.rarity === 'orange' ? 'bg-amber-900 text-amber-100 border-amber-500' :
                              eq.rarity === 'blue' ? 'bg-blue-900 text-blue-100 border-blue-500' : 'bg-zinc-800 text-zinc-300'
                            }`}>
                              {eq.type === 'shoes' ? <Footprints className="w-4 h-4" /> :
@@ -275,8 +294,8 @@ export default function CharacterScreen() {
                            <span className={`text-xs font-bold uppercase truncate max-w-[140px] ${
                              eq.rarity === 'rainbow' ? 'text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-emerald-400 to-indigo-400' :
                              eq.rarity === 'red' ? 'text-red-400' :
-                             eq.rarity === 'gold' ? 'text-amber-400' :
-                             eq.rarity === 'purple' ? 'text-purple-400' : 
+                             eq.rarity === 'orange' ? 'text-amber-400' :
+                             eq.rarity === 'black' ? 'text-zinc-400' : 
                              eq.rarity === 'blue' ? 'text-blue-400' : 'text-zinc-300'
                            }`}>{eq.name}</span>
                         </div>
@@ -292,11 +311,31 @@ export default function CharacterScreen() {
                   );
                 })}
              </div>
-             <button onClick={() => handleEquip(null)} className="w-full mt-6 py-4 block bg-red-950/30 text-red-500 uppercase tracking-widest text-xs font-bold border border-red-500/20 hover:bg-red-500/20 transition-colors">
+             <button onClick={() => handleEquip(null)} className="w-full mt-6 py-4 block bg-red-950/30 text-red-500 uppercase tracking-widest text-xs font-bold border border-red-500/20 hover:bg-red-500/20 transition-colors shrink-0">
                Gỡ bỏ trang bị
              </button>
            </div>
+           
+           {/* Right: Upgrade Panel */}
+           <div className="w-[500px] h-[85vh] max-h-[700px]">
+             {activeChar.equipment[showEquipSelect.slot as keyof typeof activeChar.equipment] ? (
+               <EquipmentUpgradeModal 
+                 inline 
+                 equipment={activeChar.equipment[showEquipSelect.slot as keyof typeof activeChar.equipment] as Equipment}
+               />
+             ) : (
+               <div className="w-full h-full bg-zinc-950 border border-white/10 flex items-center justify-center text-zinc-600 font-bold uppercase tracking-widest text-sm text-center px-8">
+                 Hãy trang bị vật phẩm<br/>để có thể cường hóa
+               </div>
+             )}
+           </div>
         </div>
+      )}
+      {upgradeTarget && (
+        <EquipmentUpgradeModal 
+          equipment={upgradeTarget} 
+          onClose={() => setUpgradeTarget(null)} 
+        />
       )}
     </div>
   );
@@ -315,7 +354,7 @@ function StatRow({ label, val, base }: { label: string, val: number, base: numbe
   );
 }
 
-function EquipSlot({ label, item, slotType, onClick }: { label: string, item: any, slotType: string, onClick: () => void }) {
+function EquipSlot({ label, item, slotType, onClick, onUpgrade }: { label: string, item: any, slotType: string, onClick: () => void, onUpgrade: (eq: Equipment) => void }) {
   const renderIcon = (isEquipped: boolean) => {
     const iconClass = isEquipped ? "w-8 h-8 drop-shadow-md" : "w-6 h-6 opacity-30 group-hover:opacity-100 transition-opacity text-white";
     if (slotType === 'shoes') return <Footprints className={iconClass} />;
@@ -327,24 +366,36 @@ function EquipSlot({ label, item, slotType, onClick }: { label: string, item: an
   };
 
   return (
-    <button onClick={onClick} className="flex gap-4 items-center group">
-       <div className={`w-16 h-16 border flex items-center justify-center transition-all ${
-         item 
-          ? (item.rarity === 'rainbow' ? 'border-indigo-400 bg-indigo-950/50 shadow-[0_0_15px_rgba(99,102,241,0.3)] text-indigo-400' :
-             item.rarity === 'red' ? 'border-red-500 bg-red-950/50 text-red-500' : 
-             item.rarity === 'gold' ? 'border-amber-500 bg-amber-950/50 text-amber-500' : 
-             item.rarity === 'purple' ? 'border-purple-500 bg-purple-950/50 text-purple-500' : 
-             'border-blue-500 bg-blue-950/50 text-blue-500')
-          : 'border-white/10 bg-black hover:border-white/30'
-       }`}>
-         {renderIcon(!!item)}
-       </div>
-       <div className="text-left">
-         <div className="text-[10px] text-zinc-500 tracking-widest uppercase mb-1">{label}</div>
-         <div className="text-sm font-bold truncate max-w-[120px] group-hover:text-amber-400 transition-colors">
-           {item ? item.name : 'Trống'}
-         </div>
-       </div>
-    </button>
+    <div className="flex gap-4 items-center group">
+      <button onClick={onClick} className={`w-16 h-16 border flex items-center justify-center transition-all ${
+        item 
+         ? (item.rarity === 'rainbow' ? 'border-indigo-400 bg-indigo-950/50 shadow-[0_0_15px_rgba(99,102,241,0.3)] text-indigo-400' :
+            item.rarity === 'black' ? 'border-zinc-500 bg-zinc-950 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)]' : 
+            item.rarity === 'red' ? 'border-red-500 bg-red-950/50 text-red-500' : 
+            item.rarity === 'orange' ? 'border-amber-500 bg-amber-950/50 text-amber-500' : 
+            'border-blue-500 bg-blue-950/50 text-blue-500')
+         : 'border-white/10 bg-black hover:border-white/30'
+      }`}>
+        {renderIcon(!!item)}
+      </button>
+      <div className="text-left flex-1 min-w-0">
+        <div className="text-[10px] text-zinc-500 tracking-widest uppercase mb-1">{label}</div>
+        <div className="flex items-center gap-2">
+          <button onClick={onClick} className="text-sm font-bold truncate max-w-[100px] hover:text-amber-400 transition-colors">
+            {item ? item.name : 'Trống'}
+          </button>
+          {item && <span className="text-[10px] font-black text-amber-500 shrink-0">+{item.level || 0}</span>}
+        </div>
+      </div>
+      {item && (
+        <button 
+          onClick={(e) => { e.stopPropagation(); onUpgrade(item); }}
+          className="p-2 text-zinc-600 hover:text-amber-500 transition-colors"
+          title="Cường Hóa"
+        >
+          <ArrowUpCircle className="w-5 h-5" />
+        </button>
+      )}
+    </div>
   );
 }

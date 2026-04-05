@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Edit2, Check, X, Camera, Footprints, HardHat, Shield, Disc, GripHorizontal, Sparkles } from 'lucide-react';
+import { ChevronLeft, Edit2, Check, X, Camera, Footprints, HardHat, Shield, Disc, GripHorizontal, Sparkles, LogOut } from 'lucide-react';
 import { usePlayer, useHydratedCharacters, useUpdateProfile } from '@/hooks/usePlayerData';
 import { calculateCP, Equipment } from '@/stores/gameStore';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 // ─── CONSTANTS ──────────────────────────────────────────────────────────
@@ -76,6 +77,15 @@ export default function PlayerProfileScreen() {
       setSelectedFrame(player.frame_url || 'none');
     }
   }, [player]);
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (_) { /* ignore */ }
+    localStorage.removeItem('fern_user_id');
+    toast.success('Bạn đã đăng xuất thành công!');
+    navigate('/auth');
+  };
 
   if (isLoading) return (
     <div className="w-full h-screen bg-black flex items-center justify-center text-white">
@@ -190,7 +200,16 @@ export default function PlayerProfileScreen() {
             {isOwn ? 'Hồ Sơ Của Bạn' : 'Hồ Sơ Chiến Binh'}
           </h1>
         </div>
-        <div className="w-24" />
+        {isOwn ? (
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-3 py-1.5 rounded border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold uppercase tracking-widest transition-colors"
+          >
+            <LogOut className="w-3.5 h-3.5" /> Đăng Xuất
+          </button>
+        ) : (
+          <div className="w-24" />
+        )}
       </div>
 
       {/* Main Content */}

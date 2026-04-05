@@ -97,11 +97,11 @@ export default function TeamSetupScreen() {
                   {char ? (
                     <>
                       <img 
-                        src={char.id === 'sasuke' ? '/videos/sasuke.gif' : char.id === 'saber' ? '/videos/saber-avatar.gif' : ''} 
+                        src={char.videoAvatar || ''} 
                         className="absolute inset-0 w-full h-full object-cover filter brightness-75 group-hover:brightness-100 transition-all" 
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
-                      {!char.id.match(/saber|sasuke/) && <div className="text-6xl absolute">😎</div>}
+                      {!char.videoAvatar && <div className="text-6xl absolute">😎</div>}
                       
                       <div className="absolute bottom-4 text-center w-full">
                         <div className="text-xs text-amber-500 font-bold uppercase tracking-widest mb-1">CP: {calculateCP(char as any).toLocaleString()}</div>
@@ -150,10 +150,10 @@ export default function TeamSetupScreen() {
                   >
                     <div className="w-full h-32 bg-black relative flex items-center justify-center">
                       <img 
-                        src={char.id === 'sasuke' ? '/videos/sasuke.gif' : char.id === 'saber' ? '/videos/saber-avatar.gif' : ''} 
+                        src={char.videoAvatar || ''} 
                         className="w-full h-full object-cover" 
                       />
-                      {!char.id.match(/saber|sasuke/) && <div className="text-4xl absolute">😎</div>}
+                      {!char.videoAvatar && <div className="text-4xl absolute">😎</div>}
                     </div>
                     <div className="p-4 w-full text-center">
                       <span className="block text-sm font-black uppercase tracking-widest mb-1">{char.name}</span>

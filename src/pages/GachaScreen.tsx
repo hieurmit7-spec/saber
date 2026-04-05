@@ -17,7 +17,7 @@ export default function GachaScreen() {
   const [pityCounter, setPityCounter] = useState(0);
 
   // Banner Selection
-  const [currentBanner, setCurrentBanner] = useState<'saber' | 'sasuke'>('saber');
+  const [currentBanner, setCurrentBanner] = useState<'saber' | 'sasuke' | 'peter' | 'gojo' | 'frieren'>('saber');
 
   const [gachaResults, setGachaResults] = useState<any[] | null>(null);
   const [displayedResults, setDisplayedResults] = useState<any[]>([]);
@@ -25,7 +25,7 @@ export default function GachaScreen() {
   const [autoSkip, setAutoSkip] = useState(false);
   const revealIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const playSFX = (type: 'roll' | 'gold' | 'rainbow') => {
+  const playSFX = (type: 'roll' | 'orange' | 'rainbow') => {
     try {
       const actx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const osc = actx.createOscillator();
@@ -41,7 +41,7 @@ export default function GachaScreen() {
         gain.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.1);
         osc.start();
         osc.stop(actx.currentTime + 0.1);
-      } else if (type === 'gold' || type === 'rainbow') {
+      } else if (type === 'orange' || type === 'rainbow') {
         osc.type = 'square';
         osc.frequency.setValueAtTime(600, actx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(1200, actx.currentTime + 0.3);
@@ -58,7 +58,7 @@ export default function GachaScreen() {
       if (autoSkip) {
         setDisplayedResults(gachaResults);
         setIsRevealing(false);
-        playSFX('gold');
+        playSFX('orange');
         return;
       }
 
@@ -75,7 +75,8 @@ export default function GachaScreen() {
 
         setDisplayedResults(prev => [...prev, currentItem]);
         
-        if (currentItem.type === 'character' || currentItem.item.rarity === 'gold' || currentItem.item.rarity === 'red' || currentItem.item.rarity === 'rainbow') {
+        // Save equipment
+        if (currentItem.type === 'character' || currentItem.item.rarity === 'orange' || currentItem.item.rarity === 'red' || currentItem.item.rarity === 'rainbow' || currentItem.item.rarity === 'black') {
           playSFX('rainbow');
         } else {
           playSFX('roll');
@@ -110,7 +111,7 @@ export default function GachaScreen() {
       return;
     }
 
-    const { equipments, shards, results, newPity } = performGachaRolls(count, pityCounter, currentBanner);
+    const { equipments, shards, materials, results, newPity } = performGachaRolls(count, pityCounter, currentBanner);
     setPityCounter(newPity);
     setGachaResults(results);
 
@@ -118,7 +119,8 @@ export default function GachaScreen() {
     callGachaRPC({
       cost,
       equipments,
-      shards
+      shards,
+      materials
     });
   };
 
@@ -129,7 +131,7 @@ export default function GachaScreen() {
   return (
     <div className="w-full h-screen overflow-hidden relative bg-black font-sans text-white border border-transparent">
       <video key={currentBanner} autoPlay loop muted playsInline className="absolute w-full h-full object-cover z-0">
-        <source src={currentBanner === 'saber' ? "/videos/banner-ulti.mp4" : "/videos/sasuke ultimate.mp4"} type="video/mp4" />
+        <source src={currentBanner === 'saber' ? "/videos/banner-ulti.mp4" : currentBanner === 'sasuke' ? "/videos/sasuke ultimate.mp4" : currentBanner === 'gojo' ? '/videos/gojo ultimate.mp4' : currentBanner === 'frieren' ? '/videos/frieren ultimate.mp4' : "/videos/peter ultimate.mp4"} type="video/mp4" />
       </video>
 
       <div className="absolute top-0 left-0 w-full p-8 z-10 flex items-center justify-between pointer-events-auto bg-gradient-to-b from-black/80 to-transparent">
@@ -144,7 +146,7 @@ export default function GachaScreen() {
 
       <div className="absolute top-32 left-1/2 -translate-x-1/2 z-10 text-center w-full max-w-4xl">
         <h1 className="text-7xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-amber-100 via-amber-400 to-amber-700 drop-shadow-2xl">
-          {currentBanner === 'saber' ? 'SABER ARCHIVE' : 'THE LAST UCHIHA'}
+          {currentBanner === 'saber' ? 'SABER ARCHIVE' : currentBanner === 'sasuke' ? 'THE LAST UCHIHA' : currentBanner === 'gojo' ? 'DOMAIN EXPANSION' : 'DRUNKEN MASTER'}
         </h1>
         <p className="mt-4 text-sm font-bold bg-black/40 backdrop-blur-md px-6 py-2 inline-flex border border-white/10 shadow-lg items-center gap-2">
           PITY RATE: <span className="text-amber-400 text-xl">{pityCounter}/50</span>
@@ -166,6 +168,27 @@ export default function GachaScreen() {
         >
           <img src="/videos/sasuke.gif" className="w-10 h-10 object-cover border border-purple-500/50" />
           <div className="text-left"><div className="text-xs font-bold text-purple-500">SASUKE</div><div className="text-[10px] text-zinc-400">Rate UP</div></div>
+        </button>
+        <button 
+          onClick={() => setCurrentBanner('peter')}
+          className={`flex items-center gap-3 p-3 border transition-colors bg-black/60 backdrop-blur ${currentBanner === 'peter' ? 'border-green-500' : 'border-white/10 hover:border-white/30'}`}
+        >
+          <img src="/videos/peter.png" className="w-10 h-10 object-cover border border-green-500/50" />
+          <div className="text-left"><div className="text-xs font-bold text-green-500">PETER</div><div className="text-[10px] text-zinc-400">Rate UP</div></div>
+        </button>
+        <button 
+          onClick={() => setCurrentBanner('gojo')}
+          className={`flex items-center gap-3 p-3 border transition-colors bg-black/60 backdrop-blur ${currentBanner === 'gojo' ? 'border-blue-500' : 'border-white/10 hover:border-white/30'}`}
+        >
+          <img src="/videos/gojo.gif" className="w-10 h-10 object-cover border border-blue-500/50" />
+          <div className="text-left"><div className="text-xs font-bold text-blue-500">GOJO</div><div className="text-[10px] text-zinc-400">Rate UP</div></div>
+        </button>
+        <button 
+          onClick={() => setCurrentBanner('frieren')}
+          className={`flex items-center gap-3 p-3 border transition-colors bg-black/60 backdrop-blur ${currentBanner === 'frieren' ? 'border-pink-500' : 'border-white/10 hover:border-white/30'}`}
+        >
+          <img src="/videos/frieren.gif" className="w-10 h-10 object-cover border border-pink-500/50" />
+          <div className="text-left"><div className="text-xs font-bold text-pink-400">FRIEREN</div><div className="text-[10px] text-zinc-400">Rate UP</div></div>
         </button>
       </div>
 
@@ -204,21 +227,37 @@ export default function GachaScreen() {
                             <img src="/videos/sasuke.gif" className="w-full h-full object-cover saturate-150" />
                           ) : res.item.id === 'saber' ? (
                             <img src="/videos/saber-avatar.gif" className="w-full h-full object-cover saturate-150" />
+                          ) : res.item.id === 'peter' ? (
+                            <img src="/videos/peter.png" className="w-full h-full object-cover saturate-150" />
+                          ) : res.item.id === 'gojo' ? (
+                            <img src="/videos/gojo.gif" className="w-full h-full object-cover saturate-150" />
+                          ) : res.item.id === 'frieren' ? (
+                            <img src="/videos/frieren.gif" className="w-full h-full object-cover saturate-150" />
                           ) : (
                             <div className="w-full h-full bg-zinc-900 flex items-center justify-center text-zinc-600 font-black text-xs uppercase">
-                              {res.item.id[0]}
+                              {res.item.name[0]}
                             </div>
                           )}
                         </div>
                         <span className="font-bold text-amber-500 text-center leading-none text-sm uppercase tracking-wider">{res.item.name}</span>
                       </>
-                    ) : (
+                      ) : res.type === 'material' ? (
+                        <>
+                          <div className={`w-14 h-14 mb-3 shrink-0 flex items-center justify-center rounded-lg border-2 border-white/10 ${
+                            res.item.rarity === 'purple' ? 'bg-purple-900/40 shadow-[0_0_15px_purple]' : 'bg-blue-900/40 shadow-[0_0_15px_blue]'
+                          }`}>
+                            <Sparkles className="text-white w-6 h-6 animate-pulse" />
+                          </div>
+                          <span className="text-[10px] font-black text-amber-500 mb-1">x{res.item.amount}</span>
+                          <span className="text-[10px] font-bold text-center px-1 leading-tight uppercase tracking-widest text-zinc-300">{res.item.name}</span>
+                        </>
+                      ) : (
                       <>
                         <div className={`w-14 h-14 mb-3 shrink-0 flex items-center justify-center rounded-sm ${
                           res.item.rarity === 'rainbow' ? 'bg-gradient-to-tr from-red-500 via-emerald-500 to-indigo-500 shadow-[0_0_20px_rgba(255,255,255,0.5)] animate-pulse' :
-                          res.item.rarity === 'red' ? 'bg-red-600 shadow-[0_0_15px_red]' :
-                          res.item.rarity === 'gold' ? 'bg-amber-500 shadow-[0_0_15px_orange]' :
-                          res.item.rarity === 'purple' ? 'bg-purple-600' :
+                          res.item.rarity === 'red' ? 'bg-red-500 shadow-[0_0_20px_red]' :
+                          res.item.rarity === 'orange' ? 'bg-amber-500 shadow-[0_0_15px_orange]' :
+                          res.item.rarity === 'black' ? 'bg-zinc-800' :
                           res.item.rarity === 'blue' ? 'bg-blue-600' : 'bg-zinc-300'
                         }`}>
                           {res.item.type === 'shoes' ? <Footprints className="text-white w-6 h-6 opacity-75" /> :

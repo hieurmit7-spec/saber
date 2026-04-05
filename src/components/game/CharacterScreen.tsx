@@ -1,4 +1,4 @@
-import { useGameStore, calculateCP, getCharacterTotalStats, STAR_BONUSES, type GameCharacter, type Equipment } from '@/stores/gameStore';
+import { useGameStore, calculateCP, getCharacterTotalStats, STAR_BONUSES_MAP, type GameCharacter, type Equipment } from '@/stores/gameStore';
 import { Star, Shield, Zap, Heart, Sword, ArrowLeft, ChevronUp } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -162,7 +162,7 @@ export function CharacterScreen() {
             </div>
             <p className="text-[10px] text-muted-foreground mb-2">Mảnh: {selected.shards}/10</p>
             <div className="space-y-1.5">
-              {STAR_BONUSES.map(b => (
+              {(STAR_BONUSES_MAP[selected.id] || []).map(b => (
                 <div key={b.stars} className={`flex items-center gap-2 text-[11px] ${selected.stars >= b.stars ? 'text-gold-bright' : 'text-muted-foreground/60'}`}>
                   <span className="font-display w-8">★{b.stars}</span>
                   <span className="font-body">{b.desc}</span>

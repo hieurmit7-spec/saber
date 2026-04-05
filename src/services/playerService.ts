@@ -120,3 +120,62 @@ export const updatePlayerProfile = async (userId: string, username: string, bio:
     throw error;
   }
 }
+
+export const upgradeEquipment = async (userId: string, equipmentId: string, stonesCount: number, stoneId: string, success: boolean) => {
+  const { error } = await (supabase as any).rpc('rpc_upgrade_equipment', {
+    p_player_id: userId,
+    p_equipment_id: equipmentId,
+    p_stones_count: stonesCount,
+    p_stone_id: stoneId,
+    p_success: success
+  });
+  if (error) throw error;
+};
+
+/**
+ * Load opponent's player_characters WITH their actual equipped items.
+ * Used by BattleScreen (ranked mode) to give the enemy team their real gear stats.
+ */
+export const getOpponentHydratedCharacters = async (opponentId: string) => {
+  const slotCols = ['equip_shoes_id', 'equip_hat_id', 'equip_armor_id', 'equip_ring_id', 'equip_belt_id', 'equip_artifact_id'];
+
+  // 1. Fetch opponent's character slots
+  const { data: charRows, error: charErr } = await (supabase as any)
+    .from('player_characters')
+    .select('character_id, star_level, ' + slotCols.join(', '))
+    .eq('player_id', opponentId);
+
+  if (charErr) throw charErr;
+  if (!charRows || charRows.length === 0) return [];
+
+  // 2. Collect unique equipment IDs
+  const equipIds: string[] = [];
+  charRows.forEach((row: any) => {
+    slotCols.forEach(col => { if (row[col]) equipIds.push(row[col]); });
+  });
+
+  // 3. Bulk-fetch equipment rows 
+  let equipMap: Record<string, any> = {};
+  if (equipIds.length > 0) {
+    const { data: equipRows, error: equipErr } = await (supabase as any)
+      .from('equipments')
+      .select('*')
+      .in('id', equipIds);
+    if (!equipErr) (equipRows || []).forEach((eq: any) => { equipMap[eq.id] = eq; });
+  }
+
+  // 4. Assemble character rows with full equipment objects
+  return charRows.map((row: any) => ({
+    character_id: row.character_id,
+    star_level: row.star_level || 1,
+    equipment: {
+      shoes:    equipMap[row.equip_shoes_id]    ?? null,
+      hat:      equipMap[row.equip_hat_id]      ?? null,
+      armor:    equipMap[row.equip_armor_id]    ?? null,
+      ring:     equipMap[row.equip_ring_id]     ?? null,
+      belt:     equipMap[row.equip_belt_id]     ?? null,
+      artifact: equipMap[row.equip_artifact_id] ?? null,
+    },
+  }));
+};
+

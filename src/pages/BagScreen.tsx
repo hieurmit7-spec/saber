@@ -44,9 +44,9 @@ export default function BagScreen() {
           <div key={eq.id} className="bg-zinc-950 border border-white/5 p-4 hover:border-white/20 transition-colors animate-in zoom-in group relative" style={{ animationDelay: `${i * 20}ms` }}>
             <div className={`w-12 h-12 mb-4 shrink-0 flex items-center justify-center rounded-sm border border-white/10 ${
               eq.rarity === 'rainbow' ? 'bg-gradient-to-tr from-red-500 via-emerald-500 to-indigo-500 shadow-[0_0_20px_rgba(255,255,255,0.5)] animate-pulse' :
-              eq.rarity === 'red' ? 'bg-red-600 shadow-[0_0_15px_red]' :
-              eq.rarity === 'gold' ? 'bg-amber-500 shadow-[0_0_15px_orange]' :
-              eq.rarity === 'purple' ? 'bg-purple-600' :
+              eq.rarity === 'red' ? 'bg-red-500 shadow-[0_0_15px_red]' :
+              eq.rarity === 'orange' ? 'bg-amber-500 shadow-[0_0_15px_orange]' :
+              eq.rarity === 'black' ? 'bg-zinc-800' :
               eq.rarity === 'blue' ? 'bg-blue-600' : 'bg-zinc-300'
             }`}>
               {eq.type === 'shoes' ? <Footprints className="text-white w-5 h-5 opacity-75" /> :
