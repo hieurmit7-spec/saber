@@ -58,10 +58,10 @@ export default function EquipmentUpgradeModal({
   const { data: materials } = useMaterials(userId);
   const { mutate: upgrade, isPending } = useUpgradeEquipment(userId);
   
-  const availableStones = materials
-    ?.filter(m => m.material_id.startsWith('upgrade_stone_lv') && m.amount > 0)
+  const availableStones = (materials || [])
+    .filter(m => m.material_id.startsWith('upgrade_stone_lv') && m.amount > 0)
     .map(m => parseInt(m.material_id.replace('upgrade_stone_lv', '')))
-    .sort((a,b) => a - b) || [];
+    .sort((a,b) => a - b);
     
   const [selectedStoneLv, setSelectedStoneLv] = useState(availableStones[0] || 1);
   const [stonesCount, setStonesCount] = useState(1);

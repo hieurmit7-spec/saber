@@ -2,17 +2,30 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Footprints, HardHat, Shield, Disc, GripHorizontal, Sparkles } from "lucide-react";
-import { useInventory } from "@/hooks/usePlayerData";
+import { useInventory, useMaterials } from "@/hooks/usePlayerData";
 
 export default function BagScreen() {
   const navigate = useNavigate();
   const userId = localStorage.getItem('fern_user_id') || '';
-  const { data: inventory, isLoading } = useInventory(userId);
-  const [filter, setFilter] = useState<'all' | 'shoes' | 'hat' | 'armor' | 'ring' | 'belt' | 'artifact'>('all');
+  const { data: inventory, isLoading: invLoading } = useInventory(userId);
+  const { data: materials, isLoading: matsLoading } = useMaterials(userId);
+  const [filter, setFilter] = useState<'all' | 'shoes' | 'hat' | 'armor' | 'ring' | 'belt' | 'artifact' | 'materials'>('all');
+
+  const isLoading = invLoading || matsLoading;
 
   if (isLoading) return <div className="w-full h-screen bg-black text-white flex items-center justify-center">Loading Bag...</div>;
 
-  const filteredItems = (inventory || []).filter((eq: any) => filter === 'all' || eq.type === filter);
+  const filteredItems = filter === 'materials' 
+    ? (materials || []).map(m => ({
+        id: m.material_id,
+        name: m.material_id.includes('lv1') ? 'Đá Nâng Cấp Lv.1' : 
+              m.material_id.includes('lv2') ? 'Đá Nâng Cấp Lv.2' : 
+              m.material_id.includes('lv3') ? 'Đá Nâng Cấp Lv.3' : 'Đá Nâng Cấp Lv.4',
+        type: 'material',
+        rarity: parseInt(m.material_id.slice(-1)) > 3 ? 'purple' : 'blue',
+        amount: m.amount
+      }))
+    : (inventory || []).filter((eq: any) => filter === 'all' || eq.type === filter);
 
   return (
     <div className="w-full h-screen bg-black text-white font-sans overflow-hidden py-12 px-8">
@@ -26,7 +39,7 @@ export default function BagScreen() {
       </div>
 
       <div className="flex gap-4 mb-8 custom-scrollbar pb-2">
-        {['all', 'shoes', 'hat', 'armor', 'ring', 'belt', 'artifact'].map((f) => (
+        {['all', 'shoes', 'hat', 'armor', 'ring', 'belt', 'artifact', 'materials'].map((f) => (
           <button 
             key={f}
             onClick={() => setFilter(f as any)}
@@ -34,7 +47,7 @@ export default function BagScreen() {
               filter === f ? 'bg-amber-500 text-black border-amber-500' : 'border-white/20 text-zinc-400 hover:text-white'
             }`}
           >
-            {f === 'all' ? 'Tất cả' : f}
+            {f === 'all' ? 'Tất cả' : f === 'materials' ? 'Nguyên Liệu' : f}
           </button>
         ))}
       </div>
@@ -44,6 +57,7 @@ export default function BagScreen() {
           <div key={eq.id} className="bg-zinc-950 border border-white/5 p-4 hover:border-white/20 transition-colors animate-in zoom-in group relative" style={{ animationDelay: `${i * 20}ms` }}>
             <div className={`w-12 h-12 mb-4 shrink-0 flex items-center justify-center rounded-sm border border-white/10 ${
               eq.rarity === 'rainbow' ? 'bg-gradient-to-tr from-red-500 via-emerald-500 to-indigo-500 shadow-[0_0_20px_rgba(255,255,255,0.5)] animate-pulse' :
+              eq.rarity === 'purple' ? 'bg-purple-900/40 shadow-[0_0_15px_purple]' :
               eq.rarity === 'red' ? 'bg-red-500 shadow-[0_0_15px_red]' :
               eq.rarity === 'orange' ? 'bg-amber-500 shadow-[0_0_15px_orange]' :
               eq.rarity === 'black' ? 'bg-zinc-800' :
@@ -57,12 +71,14 @@ export default function BagScreen() {
                <Sparkles className="text-white w-5 h-5 opacity-75" />}
             </div>
             <div className="text-xs font-bold uppercase truncate">{eq.name}</div>
-            <div className="text-[10px] text-zinc-500 mt-1 uppercase tracking-widest">{eq.typeName}</div>
+            <div className="text-[10px] text-zinc-500 mt-1 uppercase tracking-widest">
+              {eq.type === 'material' ? `Số lượng: ${eq.amount}` : eq.typeName}
+            </div>
             <div className="mt-3 text-[10px] flex flex-col gap-1 text-zinc-400">
-              {eq.stats.hp > 0 && <span className="text-green-400">+{eq.stats.hp} HP</span>}
-              {eq.stats.speed > 0 && <span>+{eq.stats.speed} Tốc</span>}
-              {eq.stats.armor > 0 && <span className="text-blue-400">+{eq.stats.armor} Giáp</span>}
-              {eq.stats.dmg > 0 && <span className="text-red-400">+{eq.stats.dmg} Dmg</span>}
+              {eq.stats?.hp > 0 && <span className="text-green-400">+{eq.stats.hp} HP</span>}
+              {eq.stats?.speed > 0 && <span>+{eq.stats.speed} Tốc</span>}
+              {eq.stats?.armor > 0 && <span className="text-blue-400">+{eq.stats.armor} Giáp</span>}
+              {eq.stats?.dmg > 0 && <span className="text-red-400">+{eq.stats.dmg} Dmg</span>}
             </div>
           </div>
         ))}

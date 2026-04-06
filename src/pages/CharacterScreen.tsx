@@ -23,6 +23,11 @@ export default function CharacterScreen() {
   const activeChar = FULL_CHARACTERS.find(c => c.id === selectedCharId);
 
   if (charsLoading || invLoading) return <div className="w-full h-screen bg-black flex items-center justify-center text-white">Loading Archive...</div>;
+  
+  // Debug inventory log
+  if (inventory) {
+    console.log("INVENTORY DATA:", inventory.length, "items found.");
+  }
 
   const handleEquip = (eqId: string | null) => {
     if (!showEquipSelect) return;
@@ -229,108 +234,119 @@ export default function CharacterScreen() {
       </div>
 
       {/* Equipment Selector Dialog */}
-      {showEquipSelect && (
-        <div className="absolute inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-50 animate-in fade-in gap-6">
-           {/* Left: Inventory Selection */}
-           <div className="w-[600px] h-[85vh] max-h-[700px] bg-zinc-950 border border-white/10 p-8 shadow-2xl flex flex-col">
-             <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-4">
-               <h3 className="text-xl font-bold uppercase tracking-widest">KHO LƯU TRỮ VẬT PHẨM</h3>
-               <button className="text-zinc-500 hover:text-white uppercase tracking-widest text-xs" onClick={() => setShowEquipSelect(null)}>ĐÓNG</button>
-             </div>
-             <div className="grid grid-cols-2 gap-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                {inventory.filter((eq: any) => eq.type === showEquipSelect.slot && 
-                  // Lọc những món đồ chưa được ai gắn (Hoặc đang được thằng này gắn)
-                  !FULL_CHARACTERS.some((c: any) => c.isUnlocked && c.id !== showEquipSelect.charId && [c.equipment.shoes?.id, c.equipment.hat?.id, c.equipment.armor?.id, c.equipment.ring?.id, c.equipment.belt?.id, c.equipment.artifact?.id].includes(eq.id))
-                ).length === 0 && (
-                  <div className="col-span-2 text-center py-12 text-zinc-600 tracking-widest uppercase text-sm">Không tìm thấy vật phẩm tương thích</div>
+      {showEquipSelect && (() => {
+        const filteredInventory = (inventory || []).filter((eq: any) => 
+          eq.type === showEquipSelect.slot && 
+          !FULL_CHARACTERS.some((c: any) => 
+            c.isUnlocked && 
+            c.id !== showEquipSelect.charId && 
+            Object.values(c.equipment).some((e: any) => e?.id === eq.id)
+          )
+        );
+
+        return (
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-50 animate-in fade-in gap-6">
+            {/* Left: Inventory Selection */}
+            <div className="w-[600px] h-[85vh] max-h-[700px] bg-zinc-950 border border-white/10 p-8 shadow-2xl flex flex-col">
+              <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-4">
+                <h3 className="text-xl font-bold uppercase tracking-widest">KHO LƯU TRỮ VẬT PHẨM</h3>
+                <button className="text-zinc-500 hover:text-white uppercase tracking-widest text-xs" onClick={() => setShowEquipSelect(null)}>ĐÓNG</button>
+              </div>
+              <div className="grid grid-cols-2 gap-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                {filteredInventory.length === 0 && (
+                  <div className="col-span-2 text-center py-12 text-zinc-600 tracking-widest uppercase text-sm">
+                    Không tìm thấy vật phẩm tương thích ({showEquipSelect.slot})
+                  </div>
                 )}
-                {inventory.filter((eq: any) => eq.type === showEquipSelect.slot && 
-                  !FULL_CHARACTERS.some((c: any) => c.isUnlocked && c.id !== showEquipSelect.charId && [c.equipment.shoes?.id, c.equipment.hat?.id, c.equipment.armor?.id, c.equipment.ring?.id, c.equipment.belt?.id, c.equipment.artifact?.id].includes(eq.id))
-                )
-                .sort((a: any, b: any) => {
-                  const getEqScore = (eq: any) => {
-                    let score = 0;
-                    if (eq.rarity === 'rainbow') score += 100000;
-                    else if (eq.rarity === 'black') score += 10000;
-                    else if (eq.rarity === 'red') score += 1000;
-                    else if (eq.rarity === 'orange') score += 100;
-                    else if (eq.rarity === 'blue') score += 10;
-                    score += (eq.stats?.hp || 0) + (eq.stats?.dmg || 0) * 2 + (eq.stats?.speed || 0) * 3 + (eq.stats?.armor || 0);
-                    return score;
-                  };
-                  return getEqScore(b) - getEqScore(a);
-                })
-                .map((eq: any) => {
-                  const isEquippedByMe = FULL_CHARACTERS.find((c: any) => c.id === showEquipSelect.charId)?.equipment[eq.type]?.id === eq.id;
-                  return (
-                    <button 
-                      key={eq.id} 
-                      onClick={() => handleEquip(eq.id)}
-                      className={`text-left p-4 bg-zinc-950/80 border transition-colors hover:bg-zinc-900 ${
-                         isEquippedByMe ? 'border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 
-                         eq.rarity === 'rainbow' ? 'border-indigo-500/50 hover:border-indigo-400' :
-                         eq.rarity === 'black' ? 'border-zinc-500/50 hover:border-zinc-400 bg-zinc-900' :
-                         eq.rarity === 'red' ? 'border-red-500/50 hover:border-red-400' :
-                         eq.rarity === 'orange' ? 'border-amber-500/50 hover:border-amber-400' :
-                         'border-white/5 hover:border-white/20'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-2">
-                        <div className="flex items-center gap-3">
-                           <div className={`w-8 h-8 rounded shrink-0 flex items-center justify-center border border-white/10 ${
-                             eq.rarity === 'rainbow' ? 'bg-gradient-to-tr from-red-500 via-emerald-500 to-indigo-500 text-white shadow-[0_0_10px_rgba(255,255,255,0.5)]' :
-                             eq.rarity === 'black' ? 'bg-zinc-950 text-white border-zinc-500 shadow-[0_0_5px_rgba(255,255,255,0.2)]' :
-                             eq.rarity === 'red' ? 'bg-red-900 text-red-100 border-red-500' :
-                             eq.rarity === 'orange' ? 'bg-amber-900 text-amber-100 border-amber-500' :
-                             eq.rarity === 'blue' ? 'bg-blue-900 text-blue-100 border-blue-500' : 'bg-zinc-800 text-zinc-300'
-                           }`}>
-                             {eq.type === 'shoes' ? <Footprints className="w-4 h-4" /> :
-                              eq.type === 'hat' ? <HardHat className="w-4 h-4" /> :
-                              eq.type === 'armor' ? <Shield className="w-4 h-4" /> :
-                              eq.type === 'ring' ? <Disc className="w-4 h-4" /> :
-                              eq.type === 'belt' ? <GripHorizontal className="w-4 h-4" /> :
-                              <Sparkles className="w-4 h-4" />}
-                           </div>
-                           <span className={`text-xs font-bold uppercase truncate max-w-[140px] ${
-                             eq.rarity === 'rainbow' ? 'text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-emerald-400 to-indigo-400' :
-                             eq.rarity === 'red' ? 'text-red-400' :
-                             eq.rarity === 'orange' ? 'text-amber-400' :
-                             eq.rarity === 'black' ? 'text-zinc-400' : 
-                             eq.rarity === 'blue' ? 'text-blue-400' : 'text-zinc-300'
-                           }`}>{eq.name}</span>
+                {filteredInventory
+                  .sort((a: any, b: any) => {
+                    const getEqScore = (eq: any) => {
+                      let score = 0;
+                      if (eq.rarity === 'rainbow') score += 100000;
+                      else if (eq.rarity === 'black') score += 10000;
+                      else if (eq.rarity === 'red') score += 1000;
+                      else if (eq.rarity === 'orange') score += 100;
+                      else if (eq.rarity === 'blue') score += 10;
+                      score += (eq.stats?.hp || 0) + (eq.stats?.dmg || 0) * 2 + (eq.stats?.speed || 0) * 3 + (eq.stats?.armor || 0);
+                      return score;
+                    };
+                    return getEqScore(b) - getEqScore(a);
+                  })
+                  .map((eq: any) => {
+                    const isEquippedByMe = activeChar.equipment[eq.type as keyof typeof activeChar.equipment]?.id === eq.id;
+                    return (
+                      <button 
+                        key={eq.id} 
+                        onClick={() => handleEquip(eq.id)}
+                        className={`text-left p-4 bg-zinc-950/80 border transition-colors hover:bg-zinc-900 ${
+                           isEquippedByMe ? 'border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 
+                           eq.rarity === 'rainbow' ? 'border-indigo-500/50 hover:border-indigo-400' :
+                           eq.rarity === 'black' ? 'border-zinc-500/50 hover:border-zinc-400 bg-zinc-900' :
+                           eq.rarity === 'red' ? 'border-red-500/50 hover:border-red-400' :
+                           eq.rarity === 'orange' ? 'border-amber-500/50 hover:border-amber-400' :
+                           'border-white/5 hover:border-white/20'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-2">
+                          <div className="flex items-center gap-3">
+                             <div className={`w-8 h-8 rounded shrink-0 flex items-center justify-center border border-white/10 ${
+                               eq.rarity === 'rainbow' ? 'bg-gradient-to-tr from-red-500 via-emerald-500 to-indigo-500 text-white shadow-[0_0_10px_rgba(255,255,255,0.5)]' :
+                               eq.rarity === 'black' ? 'bg-zinc-950 text-white border-zinc-500 shadow-[0_0_5px_rgba(255,255,255,0.2)]' :
+                               eq.rarity === 'red' ? 'bg-red-900 text-red-100 border-red-500' :
+                               eq.rarity === 'orange' ? 'bg-amber-900 text-amber-100 border-amber-500' :
+                               eq.rarity === 'blue' ? 'bg-blue-900 text-blue-100 border-blue-500' : 'bg-zinc-800 text-zinc-300'
+                             }`}>
+                               {eq.type === 'shoes' ? <Footprints className="w-4 h-4" /> :
+                                eq.type === 'hat' ? <HardHat className="w-4 h-4" /> :
+                                eq.type === 'armor' ? <Shield className="w-4 h-4" /> :
+                                eq.type === 'ring' ? <Disc className="w-4 h-4" /> :
+                                eq.type === 'belt' ? <GripHorizontal className="w-4 h-4" /> :
+                                <Sparkles className="w-4 h-4" />}
+                             </div>
+                             <span className={`text-xs font-bold uppercase truncate max-w-[140px] ${
+                               eq.rarity === 'rainbow' ? 'text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-emerald-400 to-indigo-400' :
+                               eq.rarity === 'red' ? 'text-red-400' :
+                               eq.rarity === 'orange' ? 'text-amber-400' :
+                               eq.rarity === 'black' ? 'text-zinc-400' : 
+                               eq.rarity === 'blue' ? 'text-blue-400' : 'text-zinc-300'
+                             }`}>{eq.name}</span>
+                          </div>
+                          {isEquippedByMe && <span className="text-[9px] text-amber-500 tracking-widest uppercase ml-2 border border-amber-500 px-1 py-0.5 bg-amber-500/10">Đã trang bị</span>}
                         </div>
-                        {isEquippedByMe && <span className="text-[9px] text-amber-500 tracking-widest uppercase ml-2 border border-amber-500 px-1 py-0.5 bg-amber-500/10">Đã trang bị</span>}
-                      </div>
-                      <div className="grid grid-cols-2 gap-y-1 text-zinc-400 text-xs">
-                        {eq.stats.hp > 0 && <span className="text-green-400 flex justify-between pr-2 border-r border-white/5">HP: <span>+{eq.stats.hp}</span></span>}
-                        {eq.stats.dmg > 0 && <span className="text-red-400 flex justify-between pl-2">DMG: <span>+{eq.stats.dmg}</span></span>}
-                        {eq.stats.armor > 0 && <span className="text-blue-400 flex justify-between pr-2 border-r border-white/5">ARMOR: <span>+{eq.stats.armor}</span></span>}
-                        {eq.stats.speed > 0 && <span className="text-zinc-300 flex justify-between pl-2">SPEED: <span>+{eq.stats.speed}</span></span>}
-                      </div>
-                    </button>
-                  );
-                })}
-             </div>
-             <button onClick={() => handleEquip(null)} className="w-full mt-6 py-4 block bg-red-950/30 text-red-500 uppercase tracking-widest text-xs font-bold border border-red-500/20 hover:bg-red-500/20 transition-colors shrink-0">
-               Gỡ bỏ trang bị
-             </button>
-           </div>
-           
-           {/* Right: Upgrade Panel */}
-           <div className="w-[500px] h-[85vh] max-h-[700px]">
-             {activeChar.equipment[showEquipSelect.slot as keyof typeof activeChar.equipment] ? (
-               <EquipmentUpgradeModal 
-                 inline 
-                 equipment={activeChar.equipment[showEquipSelect.slot as keyof typeof activeChar.equipment] as Equipment}
-               />
-             ) : (
-               <div className="w-full h-full bg-zinc-950 border border-white/10 flex items-center justify-center text-zinc-600 font-bold uppercase tracking-widest text-sm text-center px-8">
-                 Hãy trang bị vật phẩm<br/>để có thể cường hóa
-               </div>
-             )}
-           </div>
-        </div>
-      )}
+                        <div className="text-[10px] text-zinc-500 mb-2 uppercase tracking-tighter">
+                          {eq.type_name || eq.typeName}
+                        </div>
+                        <div className="grid grid-cols-2 gap-y-1 text-zinc-400 text-xs">
+                          {eq.stats?.hp > 0 && <span className="text-green-400 flex justify-between pr-2 border-r border-white/5">HP: <span>+{eq.stats.hp}</span></span>}
+                          {eq.stats?.dmg > 0 && <span className="text-red-400 flex justify-between pl-2">DMG: <span>+{eq.stats.dmg}</span></span>}
+                          {eq.stats?.armor > 0 && <span className="text-blue-400 flex justify-between pr-2 border-r border-white/5">ARMOR: <span>+{eq.stats.armor}</span></span>}
+                          {eq.stats?.speed > 0 && <span className="text-zinc-300 flex justify-between pl-2">SPEED: <span>+{eq.stats.speed}</span></span>}
+                        </div>
+                      </button>
+                    );
+                  })}
+              </div>
+              <button onClick={() => handleEquip(null)} className="w-full mt-6 py-4 block bg-red-950/30 text-red-500 uppercase tracking-widest text-xs font-bold border border-red-500/20 hover:bg-red-500/20 transition-colors shrink-0">
+                Gỡ bỏ trang bị
+              </button>
+            </div>
+            
+            {/* Right: Upgrade Panel */}
+            <div className="w-[500px] h-[85vh] max-h-[700px]">
+              {activeChar.equipment[showEquipSelect.slot as keyof typeof activeChar.equipment] ? (
+                <EquipmentUpgradeModal 
+                  inline 
+                  equipment={activeChar.equipment[showEquipSelect.slot as keyof typeof activeChar.equipment] as Equipment}
+                />
+              ) : (
+                <div className="w-full h-full bg-zinc-950 border border-white/10 flex items-center justify-center text-zinc-600 font-bold uppercase tracking-widest text-sm text-center px-8">
+                  Hãy trang bị vật phẩm<br/>để có thể cường hóa
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
       {upgradeTarget && (
         <EquipmentUpgradeModal 
           equipment={upgradeTarget} 

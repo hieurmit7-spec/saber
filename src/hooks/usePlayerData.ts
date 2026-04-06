@@ -186,6 +186,7 @@ export const useUpgradeEquipment = (userId: string) => {
       upgradeEquipment(userId, equipmentId, stonesCount, stoneId, success),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['characters', userId] });
+      queryClient.invalidateQueries({ queryKey: ['inventory', userId] });
       queryClient.invalidateQueries({ queryKey: ['materials', userId] });
     }
   });
