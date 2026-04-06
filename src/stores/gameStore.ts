@@ -1,27 +1,77 @@
 import { create } from 'zustand';
 
-// Types definition for backward compatibility
-// Enchantment Scaling Table
-const STAT_BONUS_TABLE = [
-  0, 0.05, 0.10, 0.15, 0.20,
-  0.30, 0.40, 0.50, 0.65,
-  0.80, 1.00, 1.25, 1.55,
-  1.90, 2.30, 2.80, 3.50
+export const STAT_SCALE_FACTORS = {
+  hp: 200,      // +200 HP per equipment level unit
+  speed: 2,     // +2 Speed per equipment level unit
+  armor: 15,    // +15 Armor per equipment level unit
+  dmg: 12,      // +12 DMG per equipment level unit
+};
+
+export const STAT_BONUS_TABLE: Record<number, number> = {
+  0: 0, 1: 0.1, 2: 0.20, 3: 0.30, 4: 0.40, 5: 0.55, 
+  6: 0.70, 7: 0.85, 8: 1.0, 9: 1.2, 10: 1.5, 
+  11: 1.8, 12: 2.2, 13: 2.6, 14: 3.1, 15: 3.7, 16: 4.5
+};
+
+// --- STAR LIMIT BREAK SYSTEM (46 STEPS) ---
+export const STAR_TIERS = [
+  { id: 'gold', label: 'Vàng', range: [1, 6], color: '#FFD700' },
+  { id: 'emerald', label: 'Lục', range: [7, 11], color: '#10b981' },
+  { id: 'azure', label: 'Lam', range: [12, 16], color: '#60a5fa' },
+  { id: 'orange', label: 'Cam', range: [17, 21], color: '#f59e0b' },
+  { id: 'purple', label: 'Tím', range: [22, 26], color: '#a855f7' },
+  { id: 'red', label: 'Đỏ', range: [27, 31], color: '#ef4444' },
+  { id: 'black', label: 'Đen', range: [32, 36], color: '#333333' },
+  { id: 'pentacolor', label: 'Ngũ Sắc', range: [37, 41], colors: ['#A52A2A', '#B8860B', '#556B2F', '#483D8B', '#708090'] },
+  { id: 'heptacolor', label: 'Thất Sắc', range: [42, 46], colors: ['#8B0000', '#D2691E', '#DAA520', '#8F9779', '#4682B4', '#191970', '#4B0082'] }
 ];
 
-const STAT_SCALE_FACTORS = {
-  hp: 1.0,
-  dmg: 0.25, // Maps to 'atk' in user code
-  armor: 0.18, // Maps to 'def' in user code
-  speed: 0.05
+export function getStarTier(starLevel: number) {
+  return STAR_TIERS.find(t => starLevel >= t.range[0] && starLevel <= t.range[1]) || STAR_TIERS[0];
+}
+
+export const getRequiredExp = (level: number) => {
+  return Math.floor(100 * Math.pow(1.15, level - 1));
 };
+
+// --- CULTIVATION REALMS (14 REALMS / 420 LEVELS) ---
+export const REALM_DATA = [
+  { name: "Luyện Khí Kỳ", cap: 30, successRate: 1.0, costStone: 1, costKC: 0 },
+  { name: "Trúc Cơ Kỳ", cap: 60, successRate: 0.95, costStone: 2, costKC: 200 },
+  { name: "Kim Đan Kỳ", cap: 90, successRate: 0.90, costStone: 3, costKC: 500 },
+  { name: "Nguyên Anh Kỳ", cap: 120, successRate: 0.85, costStone: 5, costKC: 1000 },
+  { name: "Hóa Thần Kỳ", cap: 150, successRate: 0.80, costStone: 8, costKC: 2000 },
+  { name: "Luyện Hư Kỳ", cap: 180, successRate: 0.70, costStone: 12, costKC: 4000 },
+  { name: "Hợp Thể Kỳ", cap: 210, successRate: 0.60, costStone: 15, costKC: 6000 },
+  { name: "Đại Thừa Kỳ", cap: 240, successRate: 0.50, costStone: 20, costKC: 10000 },
+  { name: "Độ Kiếp Kỳ", cap: 270, successRate: 0.40, costStone: 25, costKC: 20000 },
+  { name: "Địa Tiên", cap: 300, successRate: 0.30, costStone: 35, costKC: 40000 },
+  { name: "Chân Tiên", cap: 330, successRate: 0.20, costStone: 50, costKC: 80000 },
+  { name: "Thiên Tiên", cap: 360, successRate: 0.10, costStone: 75, costKC: 150000 },
+  { name: "Tiên Vương", cap: 390, successRate: 0.05, costStone: 100, costKC: 300000 },
+  { name: "Tiên Đế (Đỉnh Phong)", cap: 420, successRate: 0.03, costStone: 200, costKC: 1000000 }
+];
+
+export function getLevelCap(realmRank: number) {
+  return REALM_DATA[Math.min(realmRank, REALM_DATA.length - 1)].cap;
+}
+
+export function getRealmTitle(realmRank: number) {
+  return REALM_DATA[Math.min(realmRank, REALM_DATA.length - 1)].name;
+}
+
+export function getRealmStage(realmRank: number) {
+  if (realmRank < 5) return { label: "Phàm Nhân", color: "text-zinc-400" };
+  if (realmRank < 9) return { label: "Bất Tử", color: "text-amber-500" };
+  return { label: "Vô Ưu", color: "text-purple-400" };
+}
 
 export interface Equipment {
   id: string;
   name: string;
-  type: 'shoes' | 'hat' | 'armor' | 'ring' | 'belt' | 'artifact';
+  type: string;
   typeName: string;
-  rarity: 'white' | 'green' | 'blue' | 'orange' | 'red' | 'black' | 'rainbow';
+  rarity: 'white' | 'green' | 'blue' | 'orange' | 'purple' | 'gold' | 'red' | 'black' | 'rainbow';
   level: number;
   stats: {
     hp?: number;
@@ -47,6 +97,8 @@ export interface GameCharacter {
   stars: number;
   shards: number;
   level: number;
+  realm_rank: number;
+  exp: number;
   baseStats: {
     hp: number;
     speed: number;
@@ -65,11 +117,10 @@ export interface GameCharacter {
   videoAvatar?: string;
   videoBanner?: string;
   darknessStacks?: number;
-  custom_skill_3?: any;
+  isUnlocked?: boolean;
 }
 
 interface GameState {
-  // Pure UI State
   selectedCharacterId: string | null;
   currentScreen: 'main' | 'character' | 'gacha' | 'battle' | 'bag';
   showCalendar: boolean;
@@ -102,15 +153,16 @@ export const useGameStore = create<GameState>((set) => ({
   })),
 }));
 
-// Utility functions
 export function getCharacterTotalStats(char: GameCharacter) {
   const eq = char.equipment;
   const bonus = { hp: 0, speed: 0, armor: 0, dmg: 0 };
+  
+  // Equipment stats
   Object.values(eq).forEach((item) => {
     if (item) {
       const level = item.level || 0;
-      const b = STAT_BONUS_TABLE[level];
-      
+      const b = STAT_BONUS_TABLE[level] || 0;
+
       const calcScaling = (baseStatValue: number | undefined, statKey: keyof typeof STAT_SCALE_FACTORS) => {
         if (!baseStatValue) return 0;
         return baseStatValue * (1 + b * STAT_SCALE_FACTORS[statKey]);
@@ -122,24 +174,37 @@ export function getCharacterTotalStats(char: GameCharacter) {
       bonus.dmg += calcScaling(item.stats.dmg, 'dmg');
     }
   });
-  const totalHp = char.baseStats.hp + bonus.hp;
-  const totalArmor = char.baseStats.armor + bonus.armor;
 
-  // Peter 4★: +30% Max HP, +20% Armor
+  // Level scaling: +5% per level
+  const levelMult = 1 + (char.level - 1) * 0.05;
+  
+  const totalHp = (char.baseStats.hp * levelMult) + bonus.hp;
+  const totalDmg = (char.baseStats.dmg * levelMult) + bonus.dmg;
+  const totalArmor = (char.baseStats.armor * levelMult) + bonus.armor;
+  const totalSpeed = char.baseStats.speed + bonus.speed;
+
+  // Peter Specific Bonuses
   const hpMultiplier = char.id === 'peter' && char.stars >= 4 ? 1.3 : 1;
   const armorMultiplier = char.id === 'peter' && char.stars >= 4 ? 1.2 : 1;
 
   return {
     hp: Math.floor(totalHp * hpMultiplier),
-    speed: Math.floor(char.baseStats.speed + bonus.speed),
-    armor: Math.min(Math.floor(totalArmor * armorMultiplier), 2000), 
-    dmg: Math.floor(char.baseStats.dmg + bonus.dmg),
+    speed: Math.floor(totalSpeed),
+    armor: Math.floor(totalArmor * armorMultiplier),
+    dmg: Math.floor(totalDmg),
   };
 }
 
 export function calculateCP(char: GameCharacter) {
   const stats = getCharacterTotalStats(char);
-  return Math.floor(stats.hp * 0.5 + stats.dmg * 8 + stats.speed * 20 + stats.armor * 1.5) * char.stars;
+  // CP formula: weighted sum * star progress factor
+  const baseCP = (stats.hp * 0.4) + (stats.dmg * 10) + (stats.speed * 25) + (stats.armor * 2);
+  
+  // Star factor: 1 + (stars * 0.2)
+  // At 46 stars, this is 1 + 9.2 = 10.2x multiplier
+  const starFactor = 1 + (char.stars * 0.2);
+  
+  return Math.floor(baseCP * starFactor);
 }
 
 export const STAR_BONUSES_MAP: Record<string, { stars: number, desc: string }[]> = {

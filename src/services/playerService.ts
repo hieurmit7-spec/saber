@@ -11,6 +11,24 @@ export const getPlayerInfo = async (userId: string) => {
   return data;
 };
 
+export const updatePlayerKC = async (userId: string, newBalance: number) => {
+  const { error } = await (supabase as any)
+    .from('players')
+    .update({ kc_balance: newBalance })
+    .eq('id', userId);
+  
+  if (error) throw error;
+};
+
+export const updatePlayerCoins = async (userId: string, newBalance: number) => {
+  const { error } = await (supabase as any)
+    .from('players')
+    .update({ coins: newBalance })
+    .eq('id', userId);
+  
+  if (error) throw error;
+};
+
 export const getPlayerCharacters = async (userId: string) => {
   const { data, error } = await (supabase as any)
     .from('player_characters')
@@ -54,6 +72,16 @@ export const upgradeCharacterStar = async (userId: string, characterId: string, 
   
   if (error) throw error;
 }
+
+export const upgradeCharacterLevel = async (userId: string, characterId: string, newLevel: number) => {
+  const { error } = await (supabase as any)
+    .from('player_characters')
+    .update({ level: newLevel })
+    .eq('player_id', userId)
+    .eq('character_id', characterId);
+  
+  if (error) throw error;
+};
 
 export const updateTeamSetup = async (userId: string, teamSetup: any[], combatPower: number) => {
   const { error } = await (supabase as any)
@@ -127,6 +155,23 @@ export const upgradeEquipment = async (userId: string, equipmentId: string, ston
     p_equipment_id: equipmentId,
     p_stones_count: stonesCount,
     p_stone_id: stoneId,
+    p_success: success
+  });
+  if (error) throw error;
+};
+
+export const breakthroughCharacter = async (
+  userId: string, 
+  characterId: string, 
+  costStone: number, 
+  costKC: number, 
+  success: boolean
+) => {
+  const { error } = await (supabase as any).rpc('rpc_breakthrough', {
+    p_player_id: userId,
+    p_character_id: characterId,
+    p_cost_stone: costStone,
+    p_cost_kc: costKC,
     p_success: success
   });
   if (error) throw error;

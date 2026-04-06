@@ -243,10 +243,16 @@ export default function GachaScreen() {
                       </>
                       ) : res.type === 'material' ? (
                         <>
-                          <div className={`w-14 h-14 mb-3 shrink-0 flex items-center justify-center rounded-lg border-2 border-white/10 ${
-                            res.item.rarity === 'purple' ? 'bg-purple-900/40 shadow-[0_0_15px_purple]' : 'bg-blue-900/40 shadow-[0_0_15px_blue]'
+                          <div className={`w-14 h-14 mb-3 shrink-0 flex items-center justify-center rounded-lg border-2 ${
+                            res.item.id === 'magic_stone' 
+                              ? 'border-purple-500 bg-purple-900/40 shadow-[0_0_20px_#a855f7]' 
+                              : (res.item.rarity === 'purple' ? 'border-purple-500/50 bg-purple-900/20' : 'border-blue-500/50 bg-blue-900/20')
                           }`}>
-                            <Sparkles className="text-white w-6 h-6 animate-pulse" />
+                            {res.item.id === 'magic_stone' ? (
+                              <img src="/icon rpg/magic_stone.png" className="w-10 h-10 object-contain animate-pulse" alt="Magic Stone" />
+                            ) : (
+                              <Sparkles className="text-white w-6 h-6 opacity-50" />
+                            )}
                           </div>
                           <span className="text-[10px] font-black text-amber-500 mb-1">x{res.item.amount}</span>
                           <span className="text-[10px] font-bold text-center px-1 leading-tight uppercase tracking-widest text-zinc-300">{res.item.name}</span>

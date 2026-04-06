@@ -1,0 +1,7 @@
+{
+  "name": "Antigravity Project Plugin",
+  "description": "Native Antigravity Workspace Expansion (36 Skills, 20 Agents, 11 Workflows)",
+  "version": "1.2.0",
+  "author": "Antigravity",
+  "entrypoint": "ARCHITECTURE.md"
+}

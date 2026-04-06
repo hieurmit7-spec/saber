@@ -1,19 +1,19 @@
 import { useGameStore, calculateCP, getCharacterTotalStats, STAR_BONUSES_MAP, type GameCharacter, type Equipment } from '@/stores/gameStore';
 import { Star, Shield, Zap, Heart, Sword, ArrowLeft, ChevronUp } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { EquipmentIcon } from './EquipmentIcon';
+import { useHydratedCharacters, useInventory, useEquipItem, useUpgradeStar } from '@/hooks/usePlayerData';
 
 const SLOT_LABELS: Record<string, string> = {
   shoes: 'Giày', hat: 'Mũ', armor: 'Giáp', ring: 'Nhẫn', belt: 'Đai', artifact: 'Pháp bảo',
 };
-const SLOT_ICONS: Record<string, string> = {
-  shoes: '👟', hat: '🎩', armor: '🛡️', ring: '💍', belt: '🥋', artifact: '🔮',
-};
+
 const RARITY_BORDER: Record<string, string> = {
   white: 'border-muted-foreground/30', blue: 'border-blue-glow', purple: 'border-purple-400', gold: 'border-gold-bright',
 };
 
 function CharacterRoster({ characters, selectedId, onSelect }: {
-  characters: GameCharacter[]; selectedId: string | null; onSelect: (id: string) => void;
+  characters: any[]; selectedId: string | null; onSelect: (id: string) => void;
 }) {
   return (
     <div className="w-20 bg-dark-surface/90 border-r border-border flex flex-col items-center py-4 gap-3 overflow-y-auto">
@@ -36,17 +36,27 @@ function CharacterRoster({ characters, selectedId, onSelect }: {
 }
 
 function EquipmentSlot({ slot, item, onUnequip, onEquip }: {
-  slot: string; item: Equipment | null; onUnequip: () => void; onEquip: () => void;
+  slot: string; item: any; onUnequip: () => void; onEquip: () => void;
 }) {
   return (
     <div
       onClick={item ? onUnequip : onEquip}
-      className={`w-14 h-14 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105
+      className={`relative w-14 h-14 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105
         ${item ? RARITY_BORDER[item.rarity] || 'border-border' : 'border-border/50 border-dashed'} bg-secondary/50`}
       title={item ? `${item.name} (Click to unequip)` : SLOT_LABELS[slot]}
     >
-      <span className={`text-lg ${item ? '' : 'opacity-30'}`}>{SLOT_ICONS[slot]}</span>
-      <span className="text-[7px] text-muted-foreground truncate w-full text-center">{item ? item.name : SLOT_LABELS[slot]}</span>
+      <EquipmentIcon 
+        type={item?.type || slot} 
+        level={item?.level || 0} 
+        size="sm" 
+        className={item ? '' : 'opacity-20 grayscale'} 
+      />
+      {item && item.level > 0 && (
+        <div className="absolute -top-1 -right-1 bg-amber-500 text-black text-[7px] px-1 font-black rounded-sm z-30">
+          +{item.level}
+        </div>
+      )}
+      <span className="text-[6px] text-muted-foreground truncate w-full text-center absolute bottom-1">{item ? item.name : SLOT_LABELS[slot]}</span>
     </div>
   );
 }
@@ -62,8 +72,12 @@ function StatBar({ icon: Icon, label, value, color }: { icon: React.ElementType;
 }
 
 function EquipSelectDialog() {
-  const { showEquipSelect, setShowEquipSelect, inventory, equipItem } = useGameStore();
-  if (!showEquipSelect) return null;
+  const userId = localStorage.getItem('fern_user_id') || '';
+  const { showEquipSelect, setShowEquipSelect } = useGameStore();
+  const { data: inventory } = useInventory(userId);
+  const { mutate: equipItem } = useEquipItem(userId);
+  
+  if (!showEquipSelect || !inventory) return null;
 
   const matchingItems = inventory.filter(e => e.type === showEquipSelect.slot);
 
@@ -79,11 +93,11 @@ function EquipSelectDialog() {
           <p className="text-center text-muted-foreground text-sm py-4">Không có vật phẩm phù hợp trong túi đồ</p>
         ) : (
           <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto">
-            {matchingItems.map(item => (
+            {matchingItems.map((item: any) => (
               <button key={item.id}
-                onClick={() => { equipItem(showEquipSelect.charId, showEquipSelect.slot, item); setShowEquipSelect(null); }}
+                onClick={() => { equipItem({ characterId: showEquipSelect.charId, slot: showEquipSelect.slot, equipmentId: item.id }); setShowEquipSelect(null); }}
                 className={`p-2 rounded-lg border-2 ${RARITY_BORDER[item.rarity]} bg-secondary/30 flex flex-col items-center gap-1 hover:scale-105 transition-all`}>
-                <span className="text-xl">{SLOT_ICONS[showEquipSelect.slot]}</span>
+                <EquipmentIcon type={item.type} level={item.level || 0} size="sm" />
                 <span className="text-[9px] font-display text-foreground truncate w-full text-center">{item.name}</span>
                 <div className="text-[7px] text-muted-foreground">
                   {item.stats.hp ? <span>HP+{item.stats.hp} </span> : null}
@@ -99,18 +113,25 @@ function EquipSelectDialog() {
 }
 
 export function CharacterScreen() {
-  const { characters, selectedCharacterId, selectCharacter, unequipItem, setCurrentScreen, setShowEquipSelect, upgradeStars } = useGameStore();
-  const selected = characters.find((c) => c.id === selectedCharacterId) || characters[0];
-  const stats = selected ? getCharacterTotalStats(selected) : null;
-  const cp = selected ? calculateCP(selected) : 0;
+  const userId = localStorage.getItem('fern_user_id') || '';
+  const { selectedCharacterId, selectCharacter, setCurrentScreen, setShowEquipSelect } = useGameStore();
+  const { characters, isLoading } = useHydratedCharacters(userId);
+  const { mutate: equipItem } = useEquipItem(userId);
+  const { mutate: upgradeStar } = useUpgradeStar(userId);
+  
+  const charactersData = (characters || []) as any[];
+  const selected = charactersData.find((c) => c.id === selectedCharacterId) || charactersData[0];
+  const stats = selected ? getCharacterTotalStats(selected as GameCharacter) : null;
+  const cp = selected ? calculateCP(selected as GameCharacter) : 0;
 
+  if (isLoading) return <div className="w-full h-screen bg-black flex items-center justify-center text-white">Loading characters...</div>;
   if (!selected || !stats) return null;
 
   const slots = ['shoes', 'hat', 'armor', 'ring', 'belt', 'artifact'] as const;
 
   return (
     <div className="relative w-full h-screen overflow-hidden flex">
-      <CharacterRoster characters={characters} selectedId={selectedCharacterId} onSelect={selectCharacter} />
+      <CharacterRoster characters={charactersData} selectedId={selectedCharacterId} onSelect={selectCharacter} />
 
       <div className="flex-1 relative">
         {selected.id === 'saber' ? (
@@ -154,7 +175,7 @@ export function CharacterScreen() {
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-display text-xs text-gold tracking-widest uppercase">Nâng sao</h3>
               {selected.shards >= 10 && selected.stars < 6 && (
-                <button onClick={() => upgradeStars(selected.id)}
+                <button onClick={() => upgradeStar({ characterId: selected.id, newStar: selected.stars + 1, remainShards: selected.shards - 10 })}
                   className="flex items-center gap-1 gradient-gold text-primary-foreground text-[10px] font-display px-2 py-1 rounded-md">
                   <ChevronUp className="w-3 h-3" /> Nâng cấp
                 </button>
@@ -178,7 +199,7 @@ export function CharacterScreen() {
             <div className="grid grid-cols-3 gap-2">
               {slots.map((slot) => (
                 <EquipmentSlot key={slot} slot={slot} item={selected.equipment[slot]}
-                  onUnequip={() => unequipItem(selected.id, slot)}
+                  onUnequip={() => equipItem({ characterId: selected.id, slot, equipmentId: null })}
                   onEquip={() => setShowEquipSelect({ charId: selected.id, slot })}
                 />
               ))}
@@ -189,7 +210,7 @@ export function CharacterScreen() {
           <div className="bg-overlay/70 backdrop-blur-sm rounded-xl border border-border p-4 max-w-sm mb-3">
             <h3 className="font-display text-xs text-gold tracking-widest uppercase mb-3">Kỹ năng</h3>
             <div className="space-y-2">
-              {selected.skills.map((skill) => (
+              {selected.skills.map((skill: any) => (
                 <div key={skill.id} className="flex items-start gap-3 p-2 rounded-lg bg-secondary/30">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-sm font-bold
                     ${skill.type === 'ultimate' ? 'gradient-gold text-primary-foreground' : 'bg-blue-deep text-blue-glow'}`}>

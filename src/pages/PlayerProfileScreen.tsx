@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Edit2, Check, X, Camera, Footprints, HardHat, Shield, Disc, GripHorizontal, Sparkles, LogOut } from 'lucide-react';
+import { ChevronLeft, Edit2, Check, X, Camera, Footprints, HardHat, Shield, Disc, GripHorizontal, Sparkles, LogOut, Star } from 'lucide-react';
 import { usePlayer, useHydratedCharacters, useUpdateProfile } from '@/hooks/usePlayerData';
-import { calculateCP, Equipment } from '@/stores/gameStore';
+import { calculateCP, Equipment, getStarTier, getRealmTitle, getRealmStage } from '@/stores/gameStore';
+import { EquipmentIcon } from '@/components/game/EquipmentIcon';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -155,35 +156,51 @@ export default function PlayerProfileScreen() {
     </div>
   );
 
-  const TeamSlot = ({ char, idx }: { char: any | null; idx: number }) => (
-    <div
-      key={`slot-${idx}`}
-      onClick={() => char && setInspectChar(char)}
-      className={`w-28 h-28 border-2 flex items-center justify-center relative overflow-hidden rounded-lg transition-all ${
-        char
-          ? 'border-amber-500/80 bg-black cursor-pointer hover:scale-105 hover:border-amber-400 hover:shadow-[0_0_15px_rgba(245,158,11,0.4)]'
-          : 'border-zinc-800 bg-zinc-900/50'
-      }`}
-    >
-      {char ? (
-        <>
-          <img
-            src={char.id === 'sasuke' ? '/videos/sasuke.gif' : char.id === 'saber' ? '/videos/saber-avatar.gif' : ''}
-            className="w-full h-full object-cover opacity-80"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-          <div className="absolute bottom-1 left-0 w-full text-center">
-            <div className="text-xs font-bold uppercase drop-shadow-md truncate px-1">{char.name}</div>
-            <div className="text-[9px] text-amber-500">CP {calculateCP(char).toLocaleString()}</div>
-          </div>
-          <div className="absolute top-1 right-1 text-[10px] text-yellow-400">{'★'.repeat(char.stars)}</div>
-          <div className="absolute top-1 left-1 text-[9px] text-zinc-400 bg-black/60 px-1">Lv{char.level}</div>
-        </>
-      ) : (
+  const TeamSlot = ({ char, idx }: { char: any | null; idx: number }) => {
+    if (!char) return (
+      <div key={`slot-${idx}`} className="w-28 h-28 border-2 border-zinc-800 bg-zinc-900/50 flex items-center justify-center rounded-lg">
         <span className="text-zinc-700 font-bold text-[10px] tracking-widest uppercase">Trống</span>
-      )}
-    </div>
-  );
+      </div>
+    );
+
+    const cp = calculateCP(char);
+    const currentTier = getStarTier(char.stars);
+    const minStar = currentTier.range[0];
+    const tierStarCount = char.stars - minStar + 1;
+    const tierColor = currentTier.color || currentTier.colors?.[0] || '#fff';
+
+    return (
+      <div
+        key={`slot-${idx}`}
+        onClick={() => setInspectChar(char)}
+        className="w-28 h-28 border-2 flex items-center justify-center relative overflow-hidden rounded-lg transition-all border-amber-500/80 bg-black cursor-pointer hover:scale-105 hover:border-amber-400 hover:shadow-[0_0_15px_rgba(245,158,11,0.4)]"
+      >
+        <img
+          src={char.id === 'sasuke' ? '/videos/sasuke.gif' : char.id === 'saber' ? '/videos/saber-avatar.gif' : ''}
+          className="w-full h-full object-cover opacity-80"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+        
+        <div className="absolute bottom-1 left-0 w-full text-center">
+          <div className="text-[10px] font-black uppercase drop-shadow-md truncate px-1 text-white">{char.name}</div>
+          <div className="text-[8px] text-amber-500 font-bold">CP {cp.toLocaleString()}</div>
+        </div>
+
+        {/* Tiered Star Display */}
+        <div className="absolute top-1 right-1 flex gap-0.5">
+          {Array.from({ length: Math.min(5, tierStarCount) }).map((_, i) => (
+             <Star 
+                key={i} 
+                className="w-2 h-2" 
+                style={{ fill: tierColor, color: tierColor, filter: `drop-shadow(0 0 2px ${tierColor})` }} 
+             />
+          ))}
+        </div>
+
+        <div className="absolute top-1 left-1 text-[8px] font-bold text-zinc-100 bg-black/60 px-1 border border-white/10 rounded">Lv{char.level}</div>
+      </div>
+    );
+  };
 
   // ── render ──
 
@@ -264,7 +281,7 @@ export default function PlayerProfileScreen() {
             )}
 
             <div className="text-amber-500 font-bold tracking-widest text-xs uppercase mb-4">
-              Level {player?.pvp_rank_level} · ⭐ {player?.pvp_stars} Sao
+              Rank {player?.pvp_rank_level} · ⭐ {player?.pvp_stars} Sao
             </div>
 
             {/* Bio */}
@@ -323,7 +340,7 @@ export default function PlayerProfileScreen() {
               </div>
             </div>
 
-            {/* Team grid: row 1 (2) + row 2 (3) */}
+            {/* Team grid */}
             <div className="flex flex-col items-center gap-8 mt-4">
               <div className="grid grid-cols-2 gap-6 w-fit">
                 {[0, 1].map(i => <TeamSlot key={i} char={teamSlots[i]} idx={i} />)}
@@ -333,7 +350,6 @@ export default function PlayerProfileScreen() {
               </div>
             </div>
 
-            {/* Team footer: only own profile */}
             {isOwn && (
               <div className="absolute bottom-6 right-6">
                 <button onClick={() => navigate('/team')}
@@ -343,7 +359,6 @@ export default function PlayerProfileScreen() {
               </div>
             )}
 
-            {/* Hint */}
             <p className="text-center text-zinc-700 text-xs mt-8 uppercase tracking-widest">
               Nhấn vào tướng để xem trang bị
             </p>
@@ -419,56 +434,84 @@ export default function PlayerProfileScreen() {
       )}
 
       {/* ── MODAL: Equipment Inspection ── */}
-      {inspectChar && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center animate-in fade-in duration-200" onClick={() => setInspectChar(null)}>
-          <div className="w-[520px] bg-zinc-950 border border-white/10 rounded-xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
-            {/* Header */}
-            <div className="p-5 border-b border-white/5 bg-zinc-900 flex justify-between items-center">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-amber-500/50">
-                  <img
-                    src={inspectChar.id === 'sasuke' ? '/videos/sasuke.gif' : inspectChar.id === 'saber' ? '/videos/saber-avatar.gif' : ''}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black uppercase tracking-widest text-white">{inspectChar.name}</h2>
-                  <div className="text-amber-500 text-xs font-bold uppercase">{'★'.repeat(inspectChar.stars)} · CP {calculateCP(inspectChar).toLocaleString()}</div>
-                </div>
-              </div>
-              <button onClick={() => setInspectChar(null)}><X className="text-zinc-500 hover:text-white w-5 h-5" /></button>
-            </div>
+      {inspectChar && (() => {
+        const currentTier = getStarTier(inspectChar.stars);
+        const realmTitle = getRealmTitle(inspectChar.level);
+        const realmStage = getRealmStage(inspectChar.level);
+        const minStar = currentTier.range[0];
+        const tierStarCount = inspectChar.stars - minStar + 1;
+        const totalTierStars = currentTier.range[1] - currentTier.range[0] + 1;
 
-            {/* Equipment List */}
-            <div className="p-6 flex flex-col gap-3">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">Trang Bị Đang Mặc</h3>
-              {SLOT_META.map(slot => {
-                const eq: Equipment | null = inspectChar.equipment?.[slot.key] || null;
-                return (
-                  <div key={slot.key} className={`flex items-center gap-4 p-3 rounded-lg border ${eq ? `bg-black/60 ${RARITY_STYLES[eq.rarity]?.split(' ')[0] || 'border-zinc-700'}` : 'border-zinc-800 bg-zinc-900/30'}`}>
-                    <div className={`w-8 h-8 flex items-center justify-center rounded border ${eq ? RARITY_STYLES[eq.rarity] || 'border-zinc-600 text-zinc-400' : 'border-zinc-700 text-zinc-700'}`}>
-                      {slot.icon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className={`font-bold text-sm uppercase tracking-widest truncate ${eq ? 'text-white' : 'text-zinc-700'}`}>
-                        {eq ? eq.name : `─ ${slot.label} trống ─`}
-                      </div>
-                      {eq && (
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {Object.entries(eq.stats).map(([k, v]) => v ? (
-                            <span key={k} className="text-[10px] text-zinc-400 font-bold uppercase">+{v} {k.toUpperCase()}</span>
-                          ) : null)}
-                        </div>
-                      )}
-                    </div>
-                    {eq && <div className={`text-[10px] font-black uppercase tracking-widest ${RARITY_STYLES[eq.rarity] || 'text-zinc-400'}`}>{eq.rarity}</div>}
+        return (
+          <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center animate-in fade-in duration-200" onClick={() => setInspectChar(null)}>
+            <div className="w-[520px] bg-zinc-950 border border-white/10 rounded-xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+              <div className="p-5 border-b border-white/5 bg-zinc-900 flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-amber-500/50">
+                    <img
+                      src={inspectChar.id === 'sasuke' ? '/videos/sasuke.gif' : inspectChar.id === 'saber' ? '/videos/saber-avatar.gif' : ''}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                );
-              })}
+                  <div>
+                    <h2 className="text-lg font-black uppercase tracking-widest text-white">{inspectChar.name}</h2>
+                    <div className="flex items-center gap-2 mt-0.5">
+                       <span className={`text-[9px] font-black uppercase ${realmStage.color}`}>{realmStage.label}</span>
+                       <span className="text-amber-500 text-[10px] font-black uppercase tracking-widest">{realmTitle} (Lv.{inspectChar.level})</span>
+                    </div>
+                  </div>
+                </div>
+                <button onClick={() => setInspectChar(null)}><X className="text-zinc-500 hover:text-white w-5 h-5" /></button>
+              </div>
+
+              {/* Star Tier Bar in Inspection */}
+              <div className="bg-white/5 px-6 py-3 border-b border-white/5 flex items-center justify-between">
+                <div className="flex gap-1.5">
+                  {Array.from({ length: totalTierStars }).map((_, i) => {
+                    const isActive = i < tierStarCount;
+                    let starColor = currentTier.color || (currentTier.colors ? currentTier.colors[i % currentTier.colors.length] : '#fff');
+                    return (
+                      <Star key={i} className="w-4 h-4" 
+                        style={{ color: isActive ? starColor : '#1f2937', fill: isActive ? starColor : 'transparent', filter: isActive ? `drop-shadow(0 0 3px ${starColor})` : 'none' }} 
+                      />
+                    );
+                  })}
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: currentTier.color || '#fff' }}>{currentTier.label} {tierStarCount}/{totalTierStars}</span>
+              </div>
+
+              {/* Equipment List */}
+              <div className="p-6 flex flex-col gap-3">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">Trang Bị Của Tướng</h3>
+                {SLOT_META.map(slot => {
+                  const eq: Equipment | null = inspectChar.equipment?.[slot.key] || null;
+                  return (
+                    <div key={slot.key} className={`flex items-center gap-4 p-3 rounded-lg border ${eq ? `bg-black/60 ${RARITY_STYLES[eq.rarity]?.split(' ')[0] || 'border-zinc-700'}` : 'border-zinc-800 bg-zinc-900/30'}`}>
+                      <div className="relative">
+                        <EquipmentIcon type={eq?.type || slot.key} level={eq?.level || 0} size="sm" className={eq ? '' : 'opacity-20 grayscale'} />
+                        {eq && eq.level > 0 && <div className="absolute -top-1 -right-1 bg-amber-500 text-black text-[7px] px-1 font-black rounded-sm z-30">+{eq.level}</div>}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className={`font-bold text-sm uppercase tracking-widest truncate ${eq ? 'text-white' : 'text-zinc-700'}`}>
+                          {eq ? eq.name : `─ ${slot.label} trống ─`}
+                        </div>
+                        {eq && (
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {Object.entries(eq.stats).map(([k, v]) => v ? (
+                              <span key={k} className="text-[10px] text-zinc-400 font-bold uppercase">+{v} {k.toUpperCase()}</span>
+                            ) : null)}
+                          </div>
+                        )}
+                      </div>
+                      {eq && <div className={`text-[10px] font-black uppercase tracking-widest ${RARITY_STYLES[eq.rarity] || 'text-zinc-400'}`}>{eq.rarity}</div>}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

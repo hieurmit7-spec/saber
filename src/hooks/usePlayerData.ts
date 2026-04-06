@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getPlayerInfo, getPlayerCharacters, equipItemToCharacter, upgradeCharacterStar, updateTeamSetup, getLeaderboard, getArenaOpponents, updatePlayerProfile, upgradeEquipment } from '@/services/playerService';
+import { getPlayerInfo, getPlayerCharacters, equipItemToCharacter, upgradeCharacterStar, upgradeCharacterLevel, updatePlayerKC, updatePlayerCoins, breakthroughCharacter, updateTeamSetup, getLeaderboard, getArenaOpponents, updatePlayerProfile, upgradeEquipment } from '@/services/playerService';
 import { getInventory, getPlayerMaterials } from '@/services/equipmentService';
 import { rollGachaRPC } from '@/services/gachaService';
 import { SABER, SASUKE, PETER, GOJO, FRIEREN, BASE_CHARACTERS } from '@/constants/gameData';
@@ -36,22 +36,29 @@ export const useHydratedCharacters = (userId: string) => {
 
   const characters = useMemo(() => {
     if (!dbChars || !inventory) return [];
+    
+    // Optimization: Create a Map for O(1) inventory lookups
+    const inventoryMap = new Map(inventory.map((item: any) => [item.id, item]));
+
     return [SABER, SASUKE, PETER, GOJO, FRIEREN, ...BASE_CHARACTERS].map(baseChar => {
       const dbInfo = dbChars.find((c: any) => c.character_id === baseChar.id);
       
       const hydratedEquipments = {
-        shoes: dbInfo?.equip_shoes_id ? inventory.find((e: any) => e.id === dbInfo.equip_shoes_id) : null,
-        hat: dbInfo?.equip_hat_id ? inventory.find((e: any) => e.id === dbInfo.equip_hat_id) : null,
-        armor: dbInfo?.equip_armor_id ? inventory.find((e: any) => e.id === dbInfo.equip_armor_id) : null,
-        ring: dbInfo?.equip_ring_id ? inventory.find((e: any) => e.id === dbInfo.equip_ring_id) : null,
-        belt: dbInfo?.equip_belt_id ? inventory.find((e: any) => e.id === dbInfo.equip_belt_id) : null,
-        artifact: dbInfo?.equip_artifact_id ? inventory.find((e: any) => e.id === dbInfo.equip_artifact_id) : null,
+        shoes: dbInfo?.equip_shoes_id ? inventoryMap.get(dbInfo.equip_shoes_id) : null,
+        hat: dbInfo?.equip_hat_id ? inventoryMap.get(dbInfo.equip_hat_id) : null,
+        armor: dbInfo?.equip_armor_id ? inventoryMap.get(dbInfo.equip_armor_id) : null,
+        ring: dbInfo?.equip_ring_id ? inventoryMap.get(dbInfo.equip_ring_id) : null,
+        belt: dbInfo?.equip_belt_id ? inventoryMap.get(dbInfo.equip_belt_id) : null,
+        artifact: dbInfo?.equip_artifact_id ? inventoryMap.get(dbInfo.equip_artifact_id) : null,
       };
 
       return {
         ...baseChar,
         stars: dbInfo?.star_level || 1,
         shards: dbInfo?.shards || 0,
+        level: dbInfo?.level || 1,
+        realm_rank: dbInfo?.realm_rank || 0,
+        exp: dbInfo?.exp || 0,
         equipment: hydratedEquipments,
         isUnlocked: !!dbInfo
       };
@@ -94,18 +101,80 @@ export const useEquipItem = (userId: string) => {
   });
 };
 
-export const useUpgradeStar = (userId: string) => {
+export function useUpgradeStar(userId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ characterId, newStar, remainShards }: { characterId: string, newStar: number, remainShards: number }) =>
-      upgradeCharacterStar(userId, characterId, newStar, remainShards),
+    mutationFn: ({ characterId, newStar, remainingShards }: { characterId: string; newStar: number; remainingShards: number }) =>
+      upgradeCharacterStar(userId, characterId, newStar, remainingShards),
     onSuccess: () => {
-      toast.success('Nâng cấp sao thành công!');
       queryClient.invalidateQueries({ queryKey: ['characters', userId] });
+      toast.success('Đột phá sao thành công!');
+    },
+    onError: (err: any) => {
+      toast.error('Đột phá thất bại: ' + err.message);
     }
   });
-};
+}
+
+export function useUpgradeLevel(userId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ characterId, newLevel, cost }: { characterId: string; newLevel: number; cost: number }) => {
+      // 1. Get player info to check currency
+      const player = await getPlayerInfo(userId);
+      if (player.coins < cost) {
+        throw new Error('Không đủ Vàng (Coins)!');
+      }
+
+      // 2. Perform updates
+      const newBalance = player.coins - cost;
+      await updatePlayerCoins(userId, newBalance);
+      await upgradeCharacterLevel(userId, characterId, newLevel);
+      
+      return { newLevel, newBalance };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['player', userId] });
+      queryClient.invalidateQueries({ queryKey: ['characters', userId] });
+      toast.success('Thăng cấp thành công!');
+    },
+    onError: (err: any) => {
+      toast.error('Thăng cấp thất bại: ' + err.message);
+    }
+  });
+}
+
+export function useBreakthrough(userId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: { 
+      characterId: string; 
+      costStone: number; 
+      costKC: number; 
+      success: boolean;
+    }) => {
+      // Logic for cost check is mostly in RPC but good to check here too for experience
+      return breakthroughCharacter(userId, params.characterId, params.costStone, params.costKC, params.success);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['player', userId] });
+      queryClient.invalidateQueries({ queryKey: ['characters', userId] });
+      queryClient.invalidateQueries({ queryKey: ['materials', userId] });
+      
+      if (variables.success) {
+        toast.success('Đột phá cảnh giới thành công!');
+      } else {
+        toast.error('Đột phá thất bại! Tài nguyên đã bị tiêu hao.');
+      }
+    },
+    onError: (err: any) => {
+      toast.error('Lỗi đột phá: ' + err.message);
+    }
+  });
+}
 
 export const useRollGacha = (userId: string) => {
   const queryClient = useQueryClient();

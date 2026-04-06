@@ -351,23 +351,33 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
 
       if (mode === 'pve') {
         const kcReward = pveLevel * 20;
+        const coinReward = pveLevel * 500;
         (async () => {
-          const { data } = await (supabase as any).from('players').select('kc_balance').eq('id', userId).single();
-          if (data) await (supabase as any).from('players').update({ kc_balance: data.kc_balance + kcReward }).eq('id', userId);
+          const { data } = await (supabase as any).from('players').select('kc_balance, coins').eq('id', userId).single();
+          if (data) await (supabase as any).from('players').update({ 
+            kc_balance: data.kc_balance + kcReward,
+            coins: (data.coins || 0) + coinReward
+          }).eq('id', userId);
         })();
-        toast.success(`Chiến Thắng PvE! Nhận ${kcReward} KC & 1 Genesis Core.`);
+        toast.success(`Chiến Thắng PvE! Nhận ${kcReward} KC & ${coinReward.toLocaleString()} Vàng.`);
       } else if (mode === 'ranked') {
         // Save star gain to DB
         (async () => {
-          const { data } = await (supabase as any).from('players').select('pvp_stars, pvp_rank_level').eq('id', userId).single();
+          const { data } = await (supabase as any).from('players').select('pvp_stars, pvp_rank_level, coins').eq('id', userId).single();
           if (data) {
             let newStars = (data.pvp_stars || 0) + rankedStarGain;
             let newLevel = data.pvp_rank_level || 1;
+            const coinReward = 2000;
+
             if (newLevel < 13 && newStars >= 5) { 
               newStars -= 5; 
               newLevel += 1; 
             }
-            await (supabase as any).from('players').update({ pvp_stars: newStars, pvp_rank_level: newLevel }).eq('id', userId);
+            await (supabase as any).from('players').update({ 
+              pvp_stars: newStars, 
+              pvp_rank_level: newLevel,
+              coins: (data.coins || 0) + coinReward
+            }).eq('id', userId);
             queryClient.invalidateQueries({ queryKey: ['player', userId] });
           }
 
@@ -1162,6 +1172,19 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
           <h2 className={`text-6xl font-black italic tracking-widest uppercase mb-12 drop-shadow-2xl ${matchResult === 'victory' ? 'text-amber-500' : 'text-red-600'}`}>
             {matchResult === 'victory' ? 'VICTORY' : 'DEFEAT'}
           </h2>
+
+          {matchResult === 'victory' && (
+            <div className="flex gap-6 mb-8 animate-in slide-in-from-top-4 duration-700">
+               <div className="bg-zinc-900/80 border border-amber-500/30 px-6 py-3 flex items-center gap-3 backdrop-blur-sm">
+                  <img src="/icon rpg/coin.png" className="w-6 h-6 object-contain" alt="Vàng" />
+                  <span className="text-amber-500 font-black text-xl">+{mode === 'pve' ? (pveLevel * 500).toLocaleString() : '2,000'}</span>
+               </div>
+               <div className="bg-zinc-900/80 border border-blue-500/30 px-6 py-3 flex items-center gap-3 backdrop-blur-sm">
+                  <span className="text-blue-500 text-2xl">💎</span>
+                  <span className="text-blue-400 font-black text-xl">+{mode === 'pve' ? (pveLevel * 20) : '0'}</span>
+               </div>
+            </div>
+          )}
           
           {(() => {
             const playerCombatants = combatants.filter(c => !c.isEnemy);

@@ -2,16 +2,18 @@ import { Equipment } from '@/stores/gameStore';
 import { EQUIP_NAMES, EQUIP_TYPE_NAMES } from '@/constants/gameData';
 
 const RARITY_MULTIPLIERS: Record<Equipment['rarity'], number> = {
-  white: 1, green: 1.5, blue: 2.2, orange: 3.5, red: 6, black: 12, rainbow: 25
+  white: 1, green: 1.5, blue: 2.2, purple: 3, gold: 4.5, orange: 6, red: 10, black: 20, rainbow: 50
 };
 
 export function rollEquipmentRarity(): Equipment['rarity'] {
   const r = Math.random() * 100;
-  if (r < 40) return 'white';
-  if (r < 65) return 'green';
-  if (r < 85) return 'blue';
-  if (r < 95) return 'orange';
-  if (r < 99) return 'red';
+  if (r < 30) return 'white';
+  if (r < 55) return 'green';
+  if (r < 75) return 'blue';
+  if (r < 88) return 'purple';
+  if (r < 95) return 'gold';
+  if (r < 98) return 'orange';
+  if (r < 99.5) return 'red';
   if (r < 99.9) return 'black';
   return 'rainbow';
 }
@@ -92,8 +94,21 @@ export function performGachaRolls(count: number, currentPity: number, currentBan
         shards.push({ character_id: currentBanner, amount: 5 });
         results.push({ type: 'character', item: { id: currentBanner, name: `${currentBanner.toUpperCase()} Shards x5`, rarity: 'purple' } });
       } 
-      // 15% Chance for Upgrade Stones
-      else if (r < 18) {
+      // 1% Chance for Breakthrough Stone (New!)
+      else if (r < 4) {
+        materials.push({ material_id: `magic_stone`, amount: 1 });
+        results.push({ 
+          type: 'material', 
+          item: { 
+            id: `magic_stone`, 
+            name: `Đá Đột Phá`, 
+            rarity: 'rainbow',
+            amount: 1 
+          } 
+        });
+      }
+      // 15% Chance for Upgrade Stones (now 4 to 19)
+      else if (r < 19) {
         const stoneLv = Math.floor(Math.random() * 4) + 1; // Lv 1-4 from gacha
         const amount = Math.floor(Math.random() * 3) + 1;
         materials.push({ material_id: `upgrade_stone_lv${stoneLv}`, amount });

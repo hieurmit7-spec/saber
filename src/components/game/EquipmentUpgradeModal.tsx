@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { X, ArrowRight, Sparkles, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Equipment } from '@/stores/gameStore';
-import { usePlayer, useMaterials, useUpgradeEquipment } from '@/hooks/usePlayerData';
+import { useMaterials, useUpgradeEquipment } from '@/hooks/usePlayerData';
 import { toast } from 'sonner';
+import { EquipmentIcon } from './EquipmentIcon';
 
 interface UpgradeData {
   base: number;
@@ -30,7 +31,6 @@ const UPGRADE_TABLE: UpgradeData[] = [
   { base: 1, max: 1, bonus: 0.1 },    // +15 -> +16
 ];
 
-// Stat scaling from user
 const STAT_BONUS_TABLE = [
   0, 0.05, 0.10, 0.15, 0.20,
   0.30, 0.40, 0.50, 0.65,
@@ -67,7 +67,6 @@ export default function EquipmentUpgradeModal({
   const [stonesCount, setStonesCount] = useState(1);
   const [isUpgrading, setIsUpgrading] = useState(false);
 
-  // Auto-select first available if current selection becomes invalid
   React.useEffect(() => {
     if (availableStones.length > 0 && !availableStones.includes(selectedStoneLv)) {
       setSelectedStoneLv(availableStones[0]);
@@ -90,7 +89,6 @@ export default function EquipmentUpgradeModal({
     const roll = Math.random() * 100;
     const success = roll <= rate;
 
-    // Call RPC
     upgrade({
       equipmentId: equipment.id,
       stoneId,
@@ -121,8 +119,6 @@ export default function EquipmentUpgradeModal({
     return Math.floor(baseVal * (1 + currBonus * STAT_SCALE_FACTORS[statKey]));
   };
 
-  const Wrapper = inline ? 'div' : 'div';
-  
   return (
     <div className={inline ? "w-full h-full bg-zinc-950 p-8 relative flex flex-col overflow-y-auto custom-scrollbar" : "fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"}>
       <div className={inline ? "w-full flex-1 flex flex-col" : "w-full max-h-[90vh] overflow-y-auto custom-scrollbar max-w-lg bg-zinc-950 border border-white/10 p-8 relative animate-in zoom-in-95 duration-200"}>
@@ -136,19 +132,21 @@ export default function EquipmentUpgradeModal({
           Cường Hóa Trang Bị
         </h2>
 
-        {/* Equipment Info */}
-        <div className="flex items-center gap-6 mb-12 bg-white/5 p-6 border border-white/5">
-          <div className="w-20 h-20 bg-black border-2 border-amber-500/50 flex items-center justify-center relative">
-            <Sparkles className="w-10 h-10 text-amber-500/30 absolute animate-pulse" />
-            <span className="text-amber-500 font-black text-xl">+{currentLevel}</span>
+        <div className="flex items-center gap-8 mb-12 bg-white/5 p-8 border border-white/5 relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="relative z-10">
+            <EquipmentIcon type={equipment.type} level={currentLevel} size="lg" className="scale-125" />
           </div>
-          <div>
-            <div className="text-lg font-bold text-white uppercase tracking-wider">{equipment.name}</div>
-            <div className="text-xs text-zinc-500 font-bold uppercase tracking-widest">{equipment.typeName}</div>
+          <div className="relative z-10">
+            <div className="text-2xl font-black text-white uppercase tracking-tighter mb-1">{equipment.name}</div>
+            <div className="text-[10px] text-amber-500 font-bold uppercase tracking-[0.4em] mb-4 opacity-70">{equipment.typeName}</div>
+            <div className="flex items-center gap-2">
+              <span className="text-zinc-500 text-xs uppercase font-bold">Cấp hiện tại:</span>
+              <span className="text-amber-500 font-black text-xl">+{currentLevel}</span>
+            </div>
           </div>
         </div>
 
-        {/* Stats Comparison */}
         <div className="space-y-4 mb-12">
           {Object.entries(equipment.stats).map(([key, val]) => {
             if (!val) return null;
@@ -166,7 +164,6 @@ export default function EquipmentUpgradeModal({
           })}
         </div>
 
-        {/* Upgrade Selection */}
         <div className="bg-black border border-white/5 p-6 mb-8 shrink-0">
           <div className="flex justify-between items-center mb-6">
             <div className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Chọn Loại Đá</div>

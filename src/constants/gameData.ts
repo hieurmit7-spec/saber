@@ -7,6 +7,7 @@ export const SABER: GameCharacter = {
   stars: 1,
   shards: 0,
   level: 1,
+  exp: 0,
   baseStats: { hp: 1000, speed: 70, armor: 1500, dmg: 200 },
   equipment: { shoes: null, hat: null, armor: null, ring: null, belt: null, artifact: null },
   skills: [
@@ -26,6 +27,7 @@ export const SASUKE: GameCharacter = {
   stars: 1,
   shards: 0,
   level: 1,
+  exp: 0,
   baseStats: { hp: 800, speed: 100, armor: 800, dmg: 250 },
   equipment: { shoes: null, hat: null, armor: null, ring: null, belt: null, artifact: null },
   skills: [
@@ -62,6 +64,7 @@ export const PETER: GameCharacter = {
   stars: 1,
   shards: 0,
   level: 1,
+  exp: 0,
   baseStats: { hp: 1100, speed: 65, armor: 1200, dmg: 180 },
   equipment: { shoes: null, hat: null, armor: null, ring: null, belt: null, artifact: null },
   skills: [
@@ -98,6 +101,7 @@ export const GOJO: GameCharacter = {
   stars: 1,
   shards: 0,
   level: 1,
+  exp: 0,
   baseStats: { hp: 700, speed: 120, armor: 1500, dmg: 220 },
   equipment: { shoes: null, hat: null, armor: null, ring: null, belt: null, artifact: null },
   skills: [
@@ -133,6 +137,7 @@ export const FRIEREN: GameCharacter = {
   stars: 1,
   shards: 0,
   level: 1,
+  exp: 0,
   baseStats: { hp: 800, speed: 95, armor: 800, dmg: 100 },
   equipment: { shoes: null, hat: null, armor: null, ring: null, belt: null, artifact: null },
   skills: [
