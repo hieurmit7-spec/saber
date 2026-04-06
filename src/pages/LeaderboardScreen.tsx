@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Trophy, Swords, ChevronRight } from 'lucide-react';
 import { useLeaderboard } from '@/hooks/usePlayerData';
+import { getRankInfo } from '@/lib/rankHelper';
 
 const FRAME_STYLES: Record<string, string> = {
   none:        'border-white/20',
@@ -124,9 +125,21 @@ export default function LeaderboardScreen() {
 
                   {/* Score */}
                   {activeTab === 'rank' ? (
-                    <div className="w-48 text-right flex flex-col items-end">
-                      <span className="text-red-400 font-bold uppercase tracking-widest text-sm">Rank {player.pvp_rank_level}</span>
-                      <span className="text-zinc-500 text-xs">⭐ {player.pvp_stars} Sao</span>
+                    <div className="w-64 text-right flex flex-row justify-end items-center gap-4">
+                      {(() => {
+                        const rankInfo = getRankInfo(player.pvp_rank_level || 1, index);
+                        return (
+                          <>
+                            <div className="flex flex-col items-end">
+                              <span className="text-red-400 font-bold uppercase tracking-widest text-xs">{rankInfo.name}</span>
+                              <span className="text-zinc-500 text-xs text-nowrap">⭐ {player.pvp_stars} Sao</span>
+                            </div>
+                            <div className="w-14 h-14 bg-slate-900 rounded-lg flex items-center justify-center p-1 border border-[#FFD700]/30 shadow-[0_0_10px_rgba(255,215,0,0.1)]">
+                              <img src={rankInfo.image} className="w-full h-full object-contain filter drop-shadow-md" />
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   ) : (
                     <div className="w-48 text-right">

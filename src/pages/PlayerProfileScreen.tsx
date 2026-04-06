@@ -9,12 +9,15 @@ import { toast } from 'sonner';
 // ─── CONSTANTS ──────────────────────────────────────────────────────────
 
 const AVATAR_OPTIONS = [
-  { id: 'default',   url: 'default',                              type: 'text'  },
-  { id: 'av_saber',  url: '/videos/saber-avatar.gif',             type: 'image' },
-  { id: 'av_sasuke', url: '/videos/sasuke.gif',                   type: 'image' },
-  { id: 'av_3',      url: 'https://i.pravatar.cc/150?img=11',     type: 'image' },
-  { id: 'av_4',      url: 'https://i.pravatar.cc/150?img=12',     type: 'image' },
-  { id: 'av_5',      url: 'https://i.pravatar.cc/150?img=68',     type: 'image' },
+  { id: 'default', url: 'default', type: 'text' },
+  { id: 'av_1', url: '/Avt/19de17c09737a59c5684e14cbaccdfc1.jpg', type: 'image' },
+  { id: 'av_2', url: '/Avt/43d81c067a07909cc974bd6c022d6322.jpg', type: 'image' },
+  { id: 'av_3', url: '/Avt/693efabf3dba322093786917c259ec37.jpg', type: 'image' },
+  { id: 'av_4', url: '/Avt/71f927f18e5eb66f7def141f98a9825a.jpg', type: 'image' },
+  { id: 'av_5', url: '/Avt/7db746917849ae61438eaeddfd8c52c7.jpg', type: 'image' },
+  { id: 'av_6', url: '/Avt/b9dcd62241c0ed183ed879db2a0cb8fd.jpg', type: 'image' },
+  { id: 'av_7', url: '/Avt/f1970a8b5bdf920a2e1977a28e2e8c77.jpg', type: 'image' },
+  { id: 'av_8', url: '/Avt/fe614419e2a238cf82863d770c618290.jpg', type: 'image' },
 ];
 
 const FRAME_OPTIONS = [
@@ -84,7 +87,7 @@ export default function PlayerProfileScreen() {
     } catch (_) { /* ignore */ }
     localStorage.removeItem('fern_user_id');
     toast.success('Bạn đã đăng xuất thành công!');
-    navigate('/auth');
+    window.location.href = '/auth';
   };
 
   if (isLoading) return (

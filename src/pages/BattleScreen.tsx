@@ -3,12 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, FastForward, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { useHydratedCharacters, usePlayer, useArenaOpponents } from "@/hooks/usePlayerData";
 import { getCharacterTotalStats } from "@/stores/gameStore";
 import { getOpponentHydratedCharacters } from "@/services/playerService";
 import { SABER, SASUKE, PETER, GOJO, FRIEREN, BASE_CHARACTERS } from "@/constants/gameData";
+import { getRankInfo } from "@/lib/rankHelper";
 
 interface CombatEntity {
   id: string; baseId: string; name: string; isEnemy: boolean;
@@ -35,6 +37,7 @@ interface CombatEntity {
 
 export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'ranked' }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const userId = localStorage.getItem('fern_user_id') || '';
   const { data: player } = usePlayer(userId);
   const { characters: rawCharacters } = useHydratedCharacters(userId);
@@ -178,11 +181,11 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
           baseId: baseDef.id,
           name:   baseDef.name,
           isEnemy: true,
-          maxHp:  totalStats.hp   + (mult * 100),
-          hp:     totalStats.hp   + (mult * 100),
-          speed:  totalStats.speed + Math.floor((mult - 1) * 8),
-          dmg:    totalStats.dmg  + (mult * 20),
-          armor:  totalStats.armor + (mult * 50),
+          maxHp:  totalStats.hp,
+          hp:     totalStats.hp,
+          speed:  totalStats.speed,
+          dmg:    totalStats.dmg,
+          armor:  totalStats.armor,
           heat: baseDef.id === 'gojo' ? (hydratedChar.stars >= 4 ? 50 : 30) : 0,
           shield: 0,
           izanagiUsed: false,
@@ -296,8 +299,42 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
     const aliveEnemies = combatants.filter(c => c.isEnemy && c.hp > 0);
 
     if (alivePlayers.length === 0) {
-      if (mode === 'ranked') toast.error('Thất bại! -1 Sao hạng.');
-      else toast.error('Đội bạn đã bị tiêu diệt!');
+      if (mode === 'ranked') {
+        toast.error('Thất bại! -1 Sao hạng.');
+        (async () => {
+          const { data } = await (supabase as any).from('players').select('pvp_stars, pvp_rank_level').eq('id', userId).single();
+          if (data) {
+            let newStars = (data.pvp_stars || 0) - 1;
+            let newLevel = data.pvp_rank_level || 1;
+            if (newStars < 0) {
+              if (newLevel > 1) {
+                 newLevel -= 1;
+                 newStars = 4;
+              } else {
+                 newStars = 0;
+              }
+            }
+            await (supabase as any).from('players').update({ pvp_stars: newStars, pvp_rank_level: newLevel }).eq('id', userId);
+            queryClient.invalidateQueries({ queryKey: ['player', userId] });
+          }
+
+          // Đối thủ phòng thủ thành công -> Được cộng sao
+          if (selectedOpponent && selectedOpponent.id) {
+            const oppRes = await (supabase as any).from('players').select('pvp_stars, pvp_rank_level').eq('id', selectedOpponent.id).single();
+            if (oppRes.data) {
+              let oppStars = (oppRes.data.pvp_stars || 0) + 1;
+              let oppLevel = oppRes.data.pvp_rank_level || 1;
+              if (oppLevel < 13 && oppStars >= 5) {
+                oppStars -= 5;
+                oppLevel += 1;
+              }
+              await (supabase as any).from('players').update({ pvp_stars: oppStars, pvp_rank_level: oppLevel }).eq('id', selectedOpponent.id);
+            }
+          }
+        })();
+      } else {
+        toast.error('Đội bạn đã bị tiêu diệt!');
+      }
       setMatchResult('defeat');
       return;
     }
@@ -326,8 +363,30 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
           if (data) {
             let newStars = (data.pvp_stars || 0) + rankedStarGain;
             let newLevel = data.pvp_rank_level || 1;
-            if (newStars >= 5) { newStars -= 5; newLevel += 1; }
+            if (newLevel < 13 && newStars >= 5) { 
+              newStars -= 5; 
+              newLevel += 1; 
+            }
             await (supabase as any).from('players').update({ pvp_stars: newStars, pvp_rank_level: newLevel }).eq('id', userId);
+            queryClient.invalidateQueries({ queryKey: ['player', userId] });
+          }
+
+          // Đối thủ thua -> Bị trừ sao
+          if (selectedOpponent && selectedOpponent.id) {
+            const oppRes = await (supabase as any).from('players').select('pvp_stars, pvp_rank_level').eq('id', selectedOpponent.id).single();
+            if (oppRes.data) {
+              let oppStars = (oppRes.data.pvp_stars || 0) - 1;
+              let oppLevel = oppRes.data.pvp_rank_level || 1;
+              if (oppStars < 0) {
+                if (oppLevel > 1) {
+                  oppLevel -= 1;
+                  oppStars = 4;
+                } else {
+                  oppStars = 0;
+                }
+              }
+              await (supabase as any).from('players').update({ pvp_stars: oppStars, pvp_rank_level: oppLevel }).eq('id', selectedOpponent.id);
+            }
           }
         })();
         toast.success(`Chiến Thắng! +${rankedStarGain} Sao Rank!`);
@@ -843,6 +902,7 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
           const revived: string[] = [];
           nextState.forEach(c => {
             if (c.isEnemy === caster.isEnemy && c.hp <= 0 && c.id !== caster.id) {
+              // Hồi sinh
               c.hp = Math.floor(c.maxHp * 0.5);
               c.frierenSaved = false; // reset để Cứu Tử có thể kích hoạt lại sau khi hồi sinh
               revived.push(c.name);
@@ -851,6 +911,7 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
           if (revived.length > 0) {
             toast(`✨ Hồi Sinh: ${revived.join(', ')} (50% HP)!`, { duration: 3000 });
           }
+
         }
       }
 
@@ -928,8 +989,31 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
   if (phase === 'matchmaking' && mode === 'ranked') return (
     <div className="w-full h-screen flex flex-col items-center justify-center bg-zinc-950 text-white relative">
       <video autoPlay loop muted playsInline className="absolute w-full h-full object-cover opacity-20"><source src="/videos/spring-bg.mp4" /></video>
-      <div className="absolute top-8 left-8 z-20">
-        <Button variant="ghost" onClick={() => navigate('/battle')}><ChevronLeft /> Rút Lui</Button>
+      <div className="absolute top-8 left-8 z-20 flex flex-col gap-6">
+        <Button variant="ghost" onClick={() => navigate('/battle')} className="w-fit"><ChevronLeft /> Rút Lui</Button>
+        
+        {/* Hướng Dẫn Rank Ui */}
+        {(() => {
+          const currentRank = getRankInfo(player?.pvp_rank_level || 1);
+          return (
+            <div className="flex items-center gap-4 bg-black/60 backdrop-blur-md p-3 pr-6 rounded-r-full border-y border-r border-[#FFD700]/30 shadow-[0_0_15px_rgba(255,215,0,0.15)]">
+              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#FFD700] shadow-[0_0_10px_rgba(255,215,0,0.5)] bg-slate-900">
+                <img src={currentRank.image} className="w-full h-full object-cover p-1" />
+              </div>
+              <div>
+                <div className="text-[10px] text-amber-500/80 uppercase font-black tracking-widest mb-1">Rank Hiện Tại</div>
+                <div className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-2">
+                  {currentRank.name}
+                </div>
+            <div className="flex mt-1">
+              {[...Array(5)].map((_, i) => (
+                <span key={i} className={`text-sm ${i < (player?.pvp_stars || 0) ? 'text-[#FFD700]' : 'text-zinc-700'}`}>★</span>
+              ))}
+            </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       <div className="z-10 flex flex-col items-center w-full max-w-6xl">
@@ -1176,7 +1260,24 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
             </div>
           </div>
 
-          <button onClick={() => navigate('/battle')} className="mt-16 border border-amber-500 bg-amber-500/10 text-amber-500 px-12 py-4 font-bold tracking-[0.3em] uppercase hover:bg-amber-500/20 transition-colors text-sm shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+          <button onClick={() => {
+            if (mode === 'ranked') {
+              setMatchResult(null);
+              setPhase('matchmaking');
+              setCombatants([]);
+              setTurnOrder([]);
+              setSelectedOpponent(null);
+              setActiveAttacker(null);
+              setFloatingTexts([]);
+              setSlashTargetId(null);
+              setIsCastingUlt(false);
+              setActiveUltCasterId(null);
+              setActiveUltCharacter(null);
+              queryClient.invalidateQueries({ queryKey: ['arenaOpponents'] });
+            } else {
+              navigate('/battle');
+            }
+          }} className="mt-16 border border-amber-500 bg-amber-500/10 text-amber-500 px-12 py-4 font-bold tracking-[0.3em] uppercase hover:bg-amber-500/20 transition-colors text-sm shadow-[0_0_15px_rgba(245,158,11,0.2)]">
             Tiếp Tục
           </button>
         </div>
