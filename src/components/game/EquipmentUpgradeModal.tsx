@@ -76,8 +76,9 @@ export default function EquipmentUpgradeModal({
   const currentLevel = equipment.level || 0;
   if (currentLevel >= 16) return null;
 
+  const stoneMultiplier = Math.pow(1.6, selectedStoneLv - 1);
   const upgradeData = UPGRADE_TABLE[currentLevel];
-  const rate = Math.min(upgradeData.max, upgradeData.base + stonesCount * upgradeData.bonus);
+  const rate = Math.min(upgradeData.max, (upgradeData.base * stoneMultiplier) + (stonesCount * upgradeData.bonus * stoneMultiplier));
   
   const stoneId = `upgrade_stone_lv${selectedStoneLv}`;
   const ownedStones = materials?.find(m => m.material_id === stoneId)?.amount || 0;
@@ -172,15 +173,19 @@ export default function EquipmentUpgradeModal({
           
           {availableStones.length > 0 ? (
             <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 mb-6">
-              {availableStones.map(lv => (
-                <button 
-                  key={lv}
-                  onClick={() => setSelectedStoneLv(lv)}
-                  className={`h-10 border transition-all flex items-center justify-center text-xs font-bold ${selectedStoneLv === lv ? 'border-amber-500 bg-amber-500/20 text-white' : 'border-white/5 text-amber-500/70 hover:border-amber-500/50'}`}
-                >
-                  Lv{lv}
-                </button>
-              ))}
+              {availableStones.map(lv => {
+                const rarityColor = lv >= 6 ? 'border-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : lv >= 5 ? 'border-red-500' : lv >= 4 ? 'border-purple-500' : 'border-white/10';
+                return (
+                  <button 
+                    key={lv}
+                    onClick={() => setSelectedStoneLv(lv)}
+                    className={`h-16 border-2 transition-all flex flex-col items-center justify-center p-1 gap-1 ${selectedStoneLv === lv ? 'bg-amber-500/20 ' + rarityColor : 'bg-black ' + rarityColor + ' opacity-50 hover:opacity-100'}`}
+                  >
+                    <img src={`/icon rpg/lv${lv}_stone.png`} className="w-6 h-6 object-contain" alt={`LV${lv}`} />
+                    <span className="text-[8px] font-black uppercase">Lv{lv}</span>
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <div className="mb-6 p-4 border border-dashed border-white/10 text-center text-zinc-500 text-sm uppercase tracking-widest">

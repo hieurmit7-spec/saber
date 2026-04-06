@@ -5,6 +5,7 @@ import { ChevronLeft, Footprints, HardHat, Shield, Disc, GripHorizontal, Sparkle
 import { usePlayer, useRollGacha } from "@/hooks/usePlayerData";
 import { performGachaRolls } from "@/lib/gachaLogic";
 import { toast } from "sonner";
+import { EquipmentIcon } from "@/components/game/EquipmentIcon";
 
 export default function GachaScreen() {
   const navigate = useNavigate();
@@ -243,37 +244,36 @@ export default function GachaScreen() {
                       </>
                       ) : res.type === 'material' ? (
                         <>
-                          <div className={`w-14 h-14 mb-3 shrink-0 flex items-center justify-center rounded-lg border-2 ${
+                          <div className={`relative w-16 h-16 mb-2 shrink-0 flex items-center justify-center rounded-lg border-2 bg-black/40 ${
                             res.item.id === 'magic_stone' 
-                              ? 'border-purple-500 bg-purple-900/40 shadow-[0_0_20px_#a855f7]' 
-                              : (res.item.rarity === 'purple' ? 'border-purple-500/50 bg-purple-900/20' : 'border-blue-500/50 bg-blue-900/20')
+                              ? 'border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.4)]' 
+                              : (res.item.rarity === 'rainbow' ? 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.4)]' :
+                                 res.item.rarity === 'red' ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]' :
+                                 res.item.rarity === 'purple' ? 'border-purple-500/50' : 
+                                 res.item.rarity === 'orange' ? 'border-amber-500/50' : 'border-blue-500/20')
                           }`}>
                             {res.item.id === 'magic_stone' ? (
                               <img src="/icon rpg/magic_stone.png" className="w-10 h-10 object-contain animate-pulse" alt="Magic Stone" />
                             ) : (
-                              <Sparkles className="text-white w-6 h-6 opacity-50" />
+                              <img src={`/icon rpg/lv${res.item.id.replace('upgrade_stone_lv', '')}_stone.png`} className="w-10 h-10 object-contain" alt={res.item.name} />
                             )}
                           </div>
-                          <span className="text-[10px] font-black text-amber-500 mb-1">x{res.item.amount}</span>
-                          <span className="text-[10px] font-bold text-center px-1 leading-tight uppercase tracking-widest text-zinc-300">{res.item.name}</span>
+                          <div className="flex flex-col items-center">
+                            <span className="text-[10px] font-black text-amber-500 leading-none mb-1">x{res.item.amount}</span>
+                            <span className="text-[9px] font-bold text-center px-1 leading-tight uppercase tracking-widest text-zinc-400">{res.item.name}</span>
+                          </div>
                         </>
                       ) : (
                       <>
-                        <div className={`w-14 h-14 mb-3 shrink-0 flex items-center justify-center rounded-sm ${
-                          res.item.rarity === 'rainbow' ? 'bg-gradient-to-tr from-red-500 via-emerald-500 to-indigo-500 shadow-[0_0_20px_rgba(255,255,255,0.5)] animate-pulse' :
-                          res.item.rarity === 'red' ? 'bg-red-500 shadow-[0_0_20px_red]' :
-                          res.item.rarity === 'orange' ? 'bg-amber-500 shadow-[0_0_15px_orange]' :
-                          res.item.rarity === 'black' ? 'bg-zinc-800' :
-                          res.item.rarity === 'blue' ? 'bg-blue-600' : 'bg-zinc-300'
-                        }`}>
-                          {res.item.type === 'shoes' ? <Footprints className="text-white w-6 h-6 opacity-75" /> :
-                           res.item.type === 'hat' ? <HardHat className="text-white w-6 h-6 opacity-75" /> :
-                           res.item.type === 'armor' ? <Shield className="text-white w-6 h-6 opacity-75" /> :
-                           res.item.type === 'ring' ? <Disc className="text-white w-6 h-6 opacity-75" /> :
-                           res.item.type === 'belt' ? <GripHorizontal className="text-white w-6 h-6 opacity-75" /> :
-                           <Sparkles className="text-white w-6 h-6 opacity-75" />}
+                        <div className="relative mb-3 flex items-center justify-center">
+                          <EquipmentIcon type={res.item.type} level={0} rarity={res.item.rarity} size="md" />
+                          <div className={`absolute inset-0 rounded-full blur-xl opacity-20 -z-10 ${
+                            res.item.rarity === 'rainbow' ? 'bg-indigo-500' :
+                            res.item.rarity === 'red' ? 'bg-red-500' :
+                            res.item.rarity === 'orange' ? 'bg-amber-500' : 'bg-transparent'
+                          }`} />
                         </div>
-                        <span className="text-xs font-bold text-center px-2 line-clamp-2 leading-tight uppercase tracking-widest text-zinc-300">{res.item.name}</span>
+                        <span className="text-[10px] font-bold text-center px-2 line-clamp-2 leading-tight uppercase tracking-[0.1em] text-zinc-300">{res.item.name}</span>
                       </>
                     )}
                   </div>

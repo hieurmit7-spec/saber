@@ -30,14 +30,17 @@ export default function BagScreen() {
             isMagicStone: true
           };
         }
+        const lvMatch = id.match(/lv(\d+)/);
+        const lv = lvMatch ? parseInt(lvMatch[1]) : 1;
+        const rarity = lv >= 6 ? 'rainbow' : lv >= 5 ? 'red' : lv >= 4 ? 'purple' : lv >= 3 ? 'orange' : 'blue';
+        
         return {
           id,
-          name: id.includes('lv1') ? 'Đá Nâng Cấp Lv.1' : 
-                id.includes('lv2') ? 'Đá Nâng Cấp Lv.2' : 
-                id.includes('lv3') ? 'Đá Nâng Cấp Lv.3' : 'Đá Nâng Cấp Lv.4',
+          name: `Đá Nâng Cấp Lv.${lv}`,
           type: 'material',
-          rarity: parseInt(id.slice(-1)) > 3 ? 'purple' : 'blue',
-          amount: m.amount
+          rarity,
+          amount: m.amount,
+          lv
         };
       })
     : (inventory || []).filter((eq: any) => filter === 'all' || eq.type === filter);
@@ -97,12 +100,8 @@ export default function BagScreen() {
             <div key={`${eq.id}-${i}`} className={`border p-4 hover:border-white/20 transition-all animate-in zoom-in group relative ${rStyle}`} style={{ animationDelay: `${i * 20}ms` }}>
               <div className="w-16 h-16 mb-4 shrink-0 flex items-center justify-center relative mx-auto">
                 {eq.type === 'material' ? (
-                  <div className={`w-12 h-12 rounded-sm flex items-center justify-center border-2 ${eq.isMagicStone ? 'border-amber-500/30 bg-purple-900/20 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 'border-white/10 bg-white/5'}`}>
-                    {eq.isMagicStone ? (
-                       <img src="/icon rpg/magic_stone.png" className="w-8 h-8 object-contain animate-pulse" alt="Magic Stone" />
-                    ) : (
-                      <Sparkles className="text-white w-5 h-5 opacity-75" />
-                    )}
+                  <div className={`w-12 h-12 rounded-sm flex items-center justify-center border-2 ${eq.rarity === 'rainbow' ? 'border-amber-500/30 bg-purple-900/20 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 'border-white/10 bg-white/5'}`}>
+                    <img src={eq.isMagicStone ? "/icon rpg/magic_stone.png" : `/icon rpg/lv${eq.lv}_stone.png`} className="w-8 h-8 object-contain animate-pulse" alt={eq.name} />
                   </div>
                 ) : (
                   <EquipmentIcon type={eq.type} level={eq.level || 0} size="md" />

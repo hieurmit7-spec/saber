@@ -107,17 +107,27 @@ export function performGachaRolls(count: number, currentPity: number, currentBan
           } 
         });
       }
-      // 15% Chance for Upgrade Stones (now 4 to 19)
+      // 15% Chance for Upgrade Stones
       else if (r < 19) {
-        const stoneLv = Math.floor(Math.random() * 4) + 1; // Lv 1-4 from gacha
-        const amount = Math.floor(Math.random() * 3) + 1;
+        let stoneLv = 1;
+        const sr = Math.random() * 100;
+        if (sr < 50) stoneLv = 1;
+        else if (sr < 80) stoneLv = 2;
+        else if (sr < 92) stoneLv = 3;
+        else if (sr < 97) stoneLv = 4;
+        else if (sr < 99.5) stoneLv = 5;
+        else stoneLv = 6;
+
+        const amount = stoneLv >= 5 ? 1 : Math.floor(Math.random() * 3) + 1;
+        const rarity = stoneLv >= 6 ? 'rainbow' : stoneLv >= 5 ? 'red' : stoneLv >= 4 ? 'purple' : stoneLv >= 3 ? 'orange' : 'blue';
+        
         materials.push({ material_id: `upgrade_stone_lv${stoneLv}`, amount });
         results.push({ 
           type: 'material', 
           item: { 
             id: `upgrade_stone_lv${stoneLv}`, 
             name: `Đá Nâng Cấp Lv.${stoneLv}`, 
-            rarity: stoneLv > 3 ? 'purple' : 'blue',
+            rarity,
             amount 
           } 
         });

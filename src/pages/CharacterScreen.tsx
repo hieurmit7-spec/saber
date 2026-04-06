@@ -241,14 +241,34 @@ export default function CharacterScreen() {
           <div className="flex flex-col gap-3">
              {(() => {
                const levelCost = Math.floor(Math.pow(activeChar.level, 1.2) * 800 + 500);
+               
+               // Calculate x10 cost and gain
+               const levelsToGainX10 = Math.min(10, levelCap - activeChar.level);
+               let totalCostX10 = 0;
+               for (let i = 0; i < levelsToGainX10; i++) {
+                 totalCostX10 += Math.floor(Math.pow(activeChar.level + i, 1.2) * 800 + 500);
+               }
+
                return (
-                 <button 
-                   disabled={activeChar.level >= levelCap || (player?.coins || 0) < levelCost || upgradeLevelMutation.isPending || !activeChar.isUnlocked}
-                   onClick={() => upgradeLevelMutation.mutate({ characterId: activeChar.id, newLevel: activeChar.level + 1, cost: levelCost })}
-                   className="w-full bg-amber-500 hover:bg-amber-400 text-black font-black uppercase tracking-widest py-4 text-sm transition-all disabled:opacity-20 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(245,158,11,0.3)] active:scale-95"
-                 >
-                   {upgradeLevelMutation.isPending ? 'Đang thăng cấp...' : `Thăng Cấp (${levelCost.toLocaleString()} Vàng)`}
-                 </button>
+                 <div className="flex flex-col gap-3">
+                   <button 
+                     disabled={activeChar.level >= levelCap || (player?.coins || 0) < levelCost || upgradeLevelMutation.isPending || !activeChar.isUnlocked}
+                     onClick={() => upgradeLevelMutation.mutate({ characterId: activeChar.id, newLevel: activeChar.level + 1, cost: levelCost })}
+                     className="w-full bg-amber-500 hover:bg-amber-400 text-black font-black uppercase tracking-widest py-4 text-sm transition-all disabled:opacity-20 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(245,158,11,0.3)] active:scale-95"
+                   >
+                     {upgradeLevelMutation.isPending ? 'Đang thăng cấp...' : `Thăng Cấp (${levelCost.toLocaleString()} Vàng)`}
+                   </button>
+                   
+                   {levelsToGainX10 > 1 && (
+                     <button 
+                       disabled={(player?.coins || 0) < totalCostX10 || upgradeLevelMutation.isPending || !activeChar.isUnlocked}
+                       onClick={() => upgradeLevelMutation.mutate({ characterId: activeChar.id, newLevel: activeChar.level + levelsToGainX10, cost: totalCostX10 })}
+                       className="w-full bg-zinc-950/50 border border-amber-500/20 hover:bg-amber-500/5 text-amber-500 font-bold uppercase tracking-[0.15em] py-3 text-[10px] transition-all disabled:opacity-20 disabled:cursor-not-allowed active:scale-95"
+                     >
+                       {upgradeLevelMutation.isPending ? '...' : `Thăng Cấp x${levelsToGainX10} (${totalCostX10.toLocaleString()} Vàng)`}
+                     </button>
+                   )}
+                 </div>
                );
              })()}
 
@@ -407,18 +427,18 @@ export default function CharacterScreen() {
                 <Sparkles className="w-10 h-10 text-purple-400 animate-pulse" />
               </div>
               
-              <h2 className="text-3xl font-black text-white uppercase tracking-[0.2em] mb-2">Đột Phá Cảnh Giới</h2>
-              <p className="text-zinc-500 text-xs uppercase tracking-widest mb-8">Hành trình từ {realmTitle} tới {nextRealm.name}</p>
+              <h3 className="text-2xl font-black text-white uppercase tracking-widest mb-1">ĐỘT PHÁ CẢNH GIỚI</h3>
+              <p className="text-zinc-500 text-[10px] uppercase tracking-widest mb-8">Hành trình từ {realmTitle} tới {nextRealm.name}</p>
 
               <div className="w-full grid grid-cols-2 gap-4 mb-8">
                 <div className={`p-4 border bg-zinc-900/50 flex flex-col items-center gap-2 ${hasStone ? 'border-zinc-800' : 'border-red-900/50'}`}>
                   <img src="/icon rpg/magic_stone.png" className="w-8 h-8 object-contain" alt="Stone" />
-                  <div className="text-[10px] text-zinc-500 uppercase font-bold">Đá Đột Phá</div>
+                  <div className="text-[10px] text-zinc-500 uppercase font-bold text-center">Đá Đột Phá</div>
                   <div className={`text-lg font-black ${hasStone ? 'text-white' : 'text-red-500'}`}>{stoneInInv} / {nextRealm.costStone}</div>
                 </div>
                 <div className={`p-4 border bg-zinc-900/50 flex flex-col items-center gap-2 ${hasKC ? 'border-zinc-800' : 'border-red-900/50'}`}>
-                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-black text-xs font-black italic shadow-[0_0_10px_rgba(59,130,246,0.5)]">KC</div>
-                  <div className="text-[10px] text-zinc-500 uppercase font-bold">Kim Cương</div>
+                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-black text-[10px] font-black italic shadow-[0_0_10px_rgba(59,130,246,0.5)]">KC</div>
+                  <div className="text-[10px] text-zinc-500 uppercase font-bold text-center">Kim Cương</div>
                   <div className={`text-lg font-black ${hasKC ? 'text-white' : 'text-red-500'}`}>{(player?.kc_balance || 0).toLocaleString()} / {nextRealm.costKC.toLocaleString()}</div>
                 </div>
               </div>
@@ -439,7 +459,7 @@ export default function CharacterScreen() {
               <div className="flex gap-4 w-full">
                 <button 
                   onClick={() => setShowBreakthroughModal(false)}
-                  className="flex-1 border border-white/10 hover:bg-white/5 text-zinc-500 hover:text-white py-4 uppercase font-bold tracking-widest text-xs transition-all"
+                  className="flex-1 border border-white/10 hover:bg-white/5 text-zinc-500 hover:text-white py-4 uppercase font-bold tracking-widest text-[10px] transition-all"
                 >
                   Hủy Bỏ
                 </button>
@@ -470,7 +490,7 @@ export default function CharacterScreen() {
                       }
                     });
                   }}
-                  className="flex-2 bg-purple-600 hover:bg-purple-500 text-white px-8 py-4 uppercase font-black tracking-[0.2em] text-sm transition-all disabled:opacity-20 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(168,85,247,0.3)] active:scale-95"
+                  className="flex-[2] bg-purple-600 hover:bg-purple-500 text-white px-8 py-4 uppercase font-black tracking-widest text-xs transition-all disabled:opacity-20 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(168,85,247,0.3)] active:scale-95"
                 >
                   {breakthroughMutation.isPending ? 'Đang Đột Phá...' : 'Tiến Hành Đột Phá'}
                 </button>
