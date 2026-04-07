@@ -395,7 +395,7 @@ export default function CharacterScreen() {
                       className={`text-left p-4 transition-all hover:scale-[1.02] active:scale-95 border-2 ${isEquippedByMe ? 'border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.3)]' : rarityClass}`}
                     >
                       <div className="flex items-center gap-3 mb-2">
-                        <EquipmentIcon type={eq.type} level={eq.level || 0} size="sm" />
+                        <EquipmentIcon type={eq.type} level={eq.level || 0} rarity={eq.rarity} size="sm" />
                         <div className="flex flex-col min-w-0">
                           <span className="text-xs font-black uppercase truncate">{eq.name}</span>
                           <span className="text-[9px] opacity-70 tracking-tighter uppercase font-bold">Lực chiến: {itemPower.toLocaleString()}</span>
@@ -548,7 +548,7 @@ function EquipSlot({ label, item, slotType, onClick, onUpgrade, side = 'left' }:
                                         'border-zinc-400 bg-zinc-900/40') // White / Default
          : 'border-white/10 bg-black hover:border-white/30'
       }`}>
-        <EquipmentIcon type={item?.type || slotType} level={item?.level || 0} size="md" className={item ? "" : "opacity-20 grayscale"} />
+        <EquipmentIcon type={item?.type || slotType} level={item?.level || 0} rarity={item?.rarity} size="md" className={item ? "" : "opacity-20 grayscale"} />
         {item && item.level > 0 && (
           <div className="absolute top-0 right-0 bg-amber-500 text-black text-[9px] px-1 font-black rounded-sm z-30">
             +{item.level}

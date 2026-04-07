@@ -2,7 +2,15 @@ import { Equipment } from '@/stores/gameStore';
 import { EQUIP_NAMES, EQUIP_TYPE_NAMES } from '@/constants/gameData';
 
 const RARITY_MULTIPLIERS: Record<Equipment['rarity'], number> = {
-  white: 1, green: 1.5, blue: 2.2, purple: 3, gold: 4.5, orange: 6, red: 10, black: 20, rainbow: 50
+  white: 1.0,    
+  green: 1.8,    
+  blue: 3.5,    
+  purple: 8.0,  
+  gold: 20.0,    
+  orange: 50.0,  
+  red: 125.0,     
+  black: 300.0,  
+  rainbow: 750.0 
 };
 
 export function rollEquipmentRarity(): Equipment['rarity'] {
@@ -31,26 +39,31 @@ export function generateEquipment(rarity: Equipment['rarity'], forceType?: Equip
     (type === 'hat' || type === 'belt') ? 'hp' : 'dmg'; // ring/artifact = dmg
 
   const allStatKeys: (keyof Equipment['stats'])[] = ['hp', 'speed', 'armor', 'dmg'];
-  const otherStatKeys = allStatKeys.filter(k => k !== mainStatType);
   
-  // Pick 2 random sub-stats (can be same as main or others, user said "có thể trùng lặp")
-  const subStats = [
-    allStatKeys[Math.floor(Math.random() * allStatKeys.length)],
+  // Pick Sub Stats
+  // Low rarity: 0-1 sub stats
+  // High rarity: 2-3 sub stats
+  let subStatCount = 1;
+  if (rarity === 'white' || rarity === 'green') subStatCount = 1;
+  else if (rarity === 'blue' || rarity === 'purple') subStatCount = 2;
+  else subStatCount = 3;
+
+  const subStats = Array.from({ length: subStatCount }).map(() => 
     allStatKeys[Math.floor(Math.random() * allStatKeys.length)]
-  ];
+  );
 
   const baseValues: Record<keyof Equipment['stats'], number> = {
-    hp: 80, speed: 6, armor: 40, dmg: 25
+    hp: 100, speed: 8, armor: 50, dmg: 35
   };
 
   const finalStats: Equipment['stats'] = {};
   
   // Calculate Main Stat
-  finalStats[mainStatType] = Math.floor(baseValues[mainStatType] * (1.2 + Math.random() * 0.5) * mult);
+  finalStats[mainStatType] = Math.floor(baseValues[mainStatType] * (1.1 + Math.random() * 0.4) * mult);
   
   // Add Sub Stats
   subStats.forEach(s => {
-    const val = Math.floor(baseValues[s] * (0.5 + Math.random() * 0.5) * mult);
+    const val = Math.floor(baseValues[s] * (0.4 + Math.random() * 0.4) * mult);
     finalStats[s] = (finalStats[s] || 0) + val;
   });
 

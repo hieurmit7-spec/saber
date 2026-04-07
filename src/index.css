@@ -183,6 +183,12 @@
   12%, 22% { opacity: 0.5; transform: scale(1.2) rotate(-10deg); }
 }
 
+@keyframes lightning-intense {
+  0%, 2%, 6%, 10%, 100% { opacity: 0; transform: scale(1) translateX(0); }
+  1%, 5%, 9% { opacity: 1; transform: scale(1.2) translateX(2px); }
+  3%, 7% { opacity: 0.7; transform: scale(1.1) translateX(-2px); }
+}
+
 .animate-orbit {
   animation: orbit linear infinite;
 }
@@ -193,6 +199,18 @@
 
 .animate-lightning {
   animation: lightning-flicker 4s linear infinite;
+}
+
+.animate-lightning-fast {
+  animation: lightning-intense 2s linear infinite;
+}
+
+.animate-lightning-fast-delay {
+  animation: lightning-intense 2.3s linear infinite 0.5s;
+}
+
+.animate-lightning-fast-delay-2 {
+  animation: lightning-intense 1.8s linear infinite 1.2s;
 }
 
 .vfx-dot {
@@ -261,4 +279,22 @@
   background-repeat: no-repeat;
   image-rendering: pixelated;
   animation: monster-breathe 3s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes spin-slow-reverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+.animate-spin-slow-reverse {
+  animation: spin-slow-reverse 12s linear infinite;
 }

@@ -7,11 +7,12 @@ export const SABER: GameCharacter = {
   stars: 1,
   shards: 0,
   level: 1,
+  realm_rank: 0,
   exp: 0,
-  baseStats: { hp: 1000, speed: 70, armor: 1500, dmg: 200 },
+  baseStats: { hp: 900, speed: 70, armor: 1100, dmg: 210 },
   equipment: { shoes: null, hat: null, armor: null, ring: null, belt: null, artifact: null },
   skills: [
-    { id: 1, name: 'Strike Air', description: 'Active: Gây 200 sát thương. Slash trail VFX.\n[Hồi chiêu: 0 lượt]', cooldown: 0, type: 'active' },
+    { id: 1, name: 'Strike Air', description: 'Active: Gây 200 sát thương. Slash trail VFX.\n[Hồi chiêu: 1 lượt]', cooldown: 1, type: 'active' },
     { id: 2, name: 'Instinct', description: 'Passive: 50% cơ hội sát thương tay gây thêm +120% bonus dmg & nhận 1 Darkness Stack.', cooldown: 0, type: 'passive' },
     { id: 3, name: 'Excalibur', description: 'Ultimate: Requires 3 Darkness Stacks. 400% ATK all enemies + 120% ATK all allies. Cinematic cutscene.', cooldown: 0, type: 'ultimate' },
   ],
@@ -27,6 +28,7 @@ export const SASUKE: GameCharacter = {
   stars: 1,
   shards: 0,
   level: 1,
+  realm_rank: 0,
   exp: 0,
   baseStats: { hp: 800, speed: 100, armor: 800, dmg: 250 },
   equipment: { shoes: null, hat: null, armor: null, ring: null, belt: null, artifact: null },
@@ -64,6 +66,7 @@ export const PETER: GameCharacter = {
   stars: 1,
   shards: 0,
   level: 1,
+  realm_rank: 0,
   exp: 0,
   baseStats: { hp: 1100, speed: 65, armor: 1200, dmg: 180 },
   equipment: { shoes: null, hat: null, armor: null, ring: null, belt: null, artifact: null },
@@ -101,8 +104,9 @@ export const GOJO: GameCharacter = {
   stars: 1,
   shards: 0,
   level: 1,
+  realm_rank: 0,
   exp: 0,
-  baseStats: { hp: 700, speed: 120, armor: 1500, dmg: 220 },
+  baseStats: { hp: 700, speed: 120, armor: 1300, dmg: 220 },
   equipment: { shoes: null, hat: null, armor: null, ring: null, belt: null, artifact: null },
   skills: [
     {
@@ -130,6 +134,7 @@ export const GOJO: GameCharacter = {
   videoAvatar: '/videos/gojo.gif',
   videoBanner: '/videos/gojo ultimate.mp4',
 };
+
 export const FRIEREN: GameCharacter = {
   id: 'frieren',
   name: 'Frieren',
@@ -137,8 +142,9 @@ export const FRIEREN: GameCharacter = {
   stars: 1,
   shards: 0,
   level: 1,
+  realm_rank: 0,
   exp: 0,
-  baseStats: { hp: 800, speed: 95, armor: 800, dmg: 100 },
+  baseStats: { hp: 800, speed: 95, armor: 600, dmg: 100 },
   equipment: { shoes: null, hat: null, armor: null, ring: null, belt: null, artifact: null },
   skills: [
     {
@@ -151,7 +157,7 @@ export const FRIEREN: GameCharacter = {
     {
       id: 2,
       name: 'Hào Quang Sinh Tồn',
-      description: 'Passive: Cứu Tử - Bất kỳ đồng minh nào bị đánh chết sẽ còn 1 HP và được kích hoạt Miễn Thương trong hiệp đó. Chỉ dùng 1 lần cho mỗi tướng/trận.\n[4★] Bắt đầu trận đấu với 50 Mana.',
+      description: 'Passive: Cứu Tử - Bất kỳ đồng minh nào bị đánh chết sẽ còn 1 HP và được kích hoạt Miễn Thương trong hiệp đó. Chỉ dùng 1 lần cho mỗi tướng/trận.\n[4★] Bắt đầu trận đấu with 50 Mana.',
       cooldown: 0,
       type: 'passive',
     },
@@ -170,12 +176,12 @@ export const FRIEREN: GameCharacter = {
 export const BASE_CHARACTERS: Omit<GameCharacter, 'equipment'>[] = [];
 
 export const EQUIP_NAMES: Record<Equipment['type'], string[]> = {
-  shoes: ['Giày Chiến Binh', 'Giày Gió', 'Giày Thánh', 'Giày Rồng'],
-  hat: ['Mũ Sắt', 'Mũ Ma Thuật', 'Mũ Hoàng Gia', 'Mũ Rồng'],
-  armor: ['Giáp Da', 'Giáp Bạc', 'Giáp Vàng', 'Giáp Rồng'],
-  ring: ['Nhẫn Đồng', 'Nhẫn Bạc', 'Nhẫn Ngọc', 'Nhẫn Rồng'],
-  belt: ['Đai Vải', 'Đai Thép', 'Đai Ma Thuật', 'Đai Rồng'],
-  artifact: ['Đá Phép', 'Ngọc Chiến', 'Pháp Bảo Cổ', 'Pháp Bảo Rồng'],
+  shoes: ['Giày Vải', 'Giày Da', 'Giày Thép', 'Giày Pha Lê', 'Giày Hoàng Kim', 'Giày Hỏa Diệm', 'Giày Tử Thần', 'Giày Hư Không', 'Giày Thiên Mệnh'],
+  hat: ['Mũ Vải', 'Mũ Da', 'Mũ Thép', 'Mũ Pháp Sư', 'Mũ Hoàng Gia', 'Mũ Hỏa Thần', 'Mũ Huyền Nguyệt', 'Mũ Hắc Thần', 'Mũ Quang Thần'],
+  armor: ['Giáp Vải', 'Giáp Da', 'Giáp Thép', 'Giáp Bạc', 'Giáp Vàng', 'Giáp Kim Cương', 'Giáp Hắc Ám', 'Giáp Thần Long', 'Giáp Thánh Quang'],
+  ring: ['Nhẫn Đồng', 'Nhẫn Bạc', 'Nhẫn Vàng', 'Nhẫn Ngọc', 'Nhẫn Hồng Ngọc', 'Nhẫn Kim Cương', 'Nhẫn Ma Pháp', 'Nhẫn Hắc Ám', 'Nhẫn Cầu Vồng'],
+  belt: ['Đai Vải', 'Đai Da', 'Đai Thép', 'Đai Bạc', 'Đai Vàng', 'Đai Ngọc', 'Đai Long Lân', 'Đai Hắc Thần', 'Đai Thiên Giới'],
+  artifact: ['Đá Thô', 'Ngọc Sơ', 'Linh Thạch', 'Pháp Khí', 'Bảo Khí', 'Thần Khí', 'Cổ Vật', 'Ma Khí Hư Không', 'Thiên Đạo Pháp Bảo'],
 };
 
 export const EQUIP_TYPE_NAMES: Record<Equipment['type'], string> = {

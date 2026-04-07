@@ -19,3 +19,14 @@ export const getPlayerMaterials = async (userId: string) => {
   if (error) throw error;
   return data;
 };
+
+export const deleteEquipments = async (userId: string, equipmentIds: string[]) => {
+  const { error } = await (supabase as any)
+    .from('equipments')
+    .delete()
+    .eq('player_id', userId)
+    .in('id', equipmentIds);
+    
+  if (error) throw error;
+  return true;
+};

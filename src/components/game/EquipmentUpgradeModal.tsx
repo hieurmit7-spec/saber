@@ -124,7 +124,7 @@ export default function EquipmentUpgradeModal({
         <div className="flex items-center gap-8 mb-12 bg-white/5 p-8 border border-white/5 relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           <div className="relative z-10">
-            <EquipmentIcon type={equipment.type} level={currentLevel} size="lg" className="scale-125" />
+            <EquipmentIcon type={equipment.type} level={currentLevel} rarity={equipment.rarity} size="lg" className="scale-125" />
           </div>
           <div className="relative z-10">
             <div className="text-2xl font-black text-white uppercase tracking-tighter mb-1">{equipment.name}</div>

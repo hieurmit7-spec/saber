@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getPlayerInfo, getPlayerCharacters, equipItemToCharacter, upgradeCharacterStar, upgradeCharacterLevel, updatePlayerKC, updatePlayerCoins, breakthroughCharacter, updateTeamSetup, getLeaderboard, getArenaOpponents, updatePlayerProfile, upgradeEquipment } from '@/services/playerService';
-import { getInventory, getPlayerMaterials } from '@/services/equipmentService';
+import { getInventory, getPlayerMaterials, deleteEquipments } from '@/services/equipmentService';
 import { rollGachaRPC } from '@/services/gachaService';
 import { SABER, SASUKE, PETER, GOJO, FRIEREN, BASE_CHARACTERS } from '@/constants/gameData';
 import { useMemo } from 'react';
@@ -257,6 +257,22 @@ export const useUpgradeEquipment = (userId: string) => {
       queryClient.invalidateQueries({ queryKey: ['characters', userId] });
       queryClient.invalidateQueries({ queryKey: ['inventory', userId] });
       queryClient.invalidateQueries({ queryKey: ['materials', userId] });
+    }
+  });
+};
+
+export const useDeleteEquipments = (userId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (equipmentIds: string[]) => deleteEquipments(userId, equipmentIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory', userId] });
+      queryClient.invalidateQueries({ queryKey: ['characters', userId] });
+      toast.success('Đã tiêu hủy trang bị thành công!');
+    },
+    onError: (err: any) => {
+      toast.error('Lỗi khi tiêu hủy: ' + err.message);
     }
   });
 };
