@@ -12,6 +12,9 @@ import { getOpponentHydratedCharacters } from "@/services/playerService";
 import { SABER, SASUKE, PETER, GOJO, FRIEREN, BASE_CHARACTERS } from "@/constants/gameData";
 import { getRankInfo } from "@/lib/rankHelper";
 import { STAGE_1_MONSTERS, STAGE_1_BOSS } from "@/constants/monsterData";
+import NormalAttackEffect from "@/components/game/NormalAttackEffect";
+import GojoSkill1Effect from "@/components/game/GojoSkill1Effect";
+import PeterSkill1Effect from "@/components/game/PeterSkill1Effect";
 
 interface CombatEntity {
   id: string; baseId: string; name: string; isEnemy: boolean;
@@ -69,6 +72,8 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
 
   const [activeAttacker, setActiveAttacker] = useState<{ id: string, attackerPos: number, targetPos: number, isEnemy: boolean, targetIsEnemy: boolean } | null>(null);
   const [slashTargetId, setSlashTargetId] = useState<string | null>(null);
+  const [activeSkillEffect, setActiveSkillEffect] = useState<'gojo_skill1' | 'peter_skill1' | 'normal' | null>(null);
+  const [effectTargetId, setEffectTargetId] = useState<string | null>(null);
   const [floatingTexts, setFloatingTexts] = useState<{ id: string, targetId: string, dmg: number | string, isSkill?: boolean, isHeal?: boolean }[]>([]);
   const [matchResult, setMatchResult] = useState<'victory' | 'defeat' | null>(null);
 
@@ -589,6 +594,16 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
       isEnemy: currentEntity.isEnemy,
       targetIsEnemy: target.isEnemy
     });
+
+    // Kích hoạt hiệu ứng đòn đánh — gắn vào thẻ tướng mục tiêu
+    setEffectTargetId(target.id);
+    if (currentEntity.baseId === 'gojo' && isSkill1) {
+      setActiveSkillEffect('gojo_skill1');
+    } else if (currentEntity.baseId === 'peter' && isSkill1) {
+      setActiveSkillEffect('peter_skill1');
+    } else {
+      setActiveSkillEffect('normal');
+    }
 
     setTimeout(() => {
       if (finalDmg > 0 || !isSkill1) setSlashTargetId(target.id);
@@ -1183,11 +1198,11 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
         <div className="flex flex-col items-center h-full pt-16 bg-[url('/battle-bg-placeholder.jpg')] bg-cover relative">
           {ultText && <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 text-6xl font-black text-amber-500 animate-pulse drop-shadow-2xl">{ultText}</div>}
           <div className="w-full flex-1 flex flex-col items-center pb-8 gap-8">
-            <CombatGrid row={[2, 3, 4]} combatants={combatants.filter(c => c.isEnemy)} activeAttacker={activeAttacker} slashTargetId={slashTargetId} floatingTexts={floatingTexts} />
-            <CombatGrid row={[0, 1]} combatants={combatants.filter(c => c.isEnemy)} activeAttacker={activeAttacker} slashTargetId={slashTargetId} floatingTexts={floatingTexts} />
+            <CombatGrid row={[2, 3, 4]} combatants={combatants.filter(c => c.isEnemy)} activeAttacker={activeAttacker} slashTargetId={slashTargetId} floatingTexts={floatingTexts} effectTargetId={effectTargetId} skillEffectType={activeSkillEffect} onCompleteEffect={() => { setActiveSkillEffect(null); setEffectTargetId(null); }} />
+            <CombatGrid row={[0, 1]} combatants={combatants.filter(c => c.isEnemy)} activeAttacker={activeAttacker} slashTargetId={slashTargetId} floatingTexts={floatingTexts} effectTargetId={effectTargetId} skillEffectType={activeSkillEffect} onCompleteEffect={() => { setActiveSkillEffect(null); setEffectTargetId(null); }} />
             <div className="w-full max-w-2xl h-1 bg-red-500/30 my-4" />
-            <CombatGrid row={[0, 1]} combatants={combatants.filter(c => !c.isEnemy)} activeAttacker={activeAttacker} slashTargetId={slashTargetId} floatingTexts={floatingTexts} />
-            <CombatGrid row={[2, 3, 4]} combatants={combatants.filter(c => !c.isEnemy)} activeAttacker={activeAttacker} slashTargetId={slashTargetId} floatingTexts={floatingTexts} />
+            <CombatGrid row={[0, 1]} combatants={combatants.filter(c => !c.isEnemy)} activeAttacker={activeAttacker} slashTargetId={slashTargetId} floatingTexts={floatingTexts} effectTargetId={effectTargetId} skillEffectType={activeSkillEffect} onCompleteEffect={() => { setActiveSkillEffect(null); setEffectTargetId(null); }} />
+            <CombatGrid row={[2, 3, 4]} combatants={combatants.filter(c => !c.isEnemy)} activeAttacker={activeAttacker} slashTargetId={slashTargetId} floatingTexts={floatingTexts} effectTargetId={effectTargetId} skillEffectType={activeSkillEffect} onCompleteEffect={() => { setActiveSkillEffect(null); setEffectTargetId(null); }} />
           </div>
         </div>
       )}
@@ -1356,7 +1371,7 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
   );
 }
 
-function CombatGrid({ row, combatants, activeAttacker, slashTargetId, floatingTexts }: { row: number[], combatants: CombatEntity[], activeAttacker: any, slashTargetId: any, floatingTexts: any[] }) {
+function CombatGrid({ row, combatants, activeAttacker, slashTargetId, floatingTexts, effectTargetId, skillEffectType, onCompleteEffect }: { row: number[], combatants: CombatEntity[], activeAttacker: any, slashTargetId: any, floatingTexts: any[], effectTargetId?: string | null, skillEffectType?: string | null, onCompleteEffect?: () => void }) {
   if (!combatants.some(c => row.includes(c.position))) return <div className="h-32" />;
   return (
     <div className={`flex gap-6 ${row.length === 2 ? 'w-80 justify-center' : 'w-full max-w-2xl justify-center'}`}>
@@ -1413,7 +1428,7 @@ function CombatGrid({ row, combatants, activeAttacker, slashTargetId, floatingTe
               <div className="absolute inset-[-6px] rounded-xl border-4 border-yellow-400 shadow-[0_0_20px_rgba(234,179,8,0.9),inset_0_0_15px_rgba(234,179,8,0.3)] z-50 pointer-events-none animate-pulse" />
             )}
 
-            <div className={`w-24 h-24 rounded-lg bg-black border-2 transition-all duration-100 relative overflow-hidden flex items-center justify-center ${flashClass} ${c.shield > 0 ? 'border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.5)]' : c.flammeBarrier ? 'border-yellow-400' : 'border-zinc-800'}`}>
+            <div className={`w-24 h-24 rounded-lg bg-black border-2 transition-all duration-100 relative flex items-center justify-center ${c.id === effectTargetId ? 'overflow-visible' : 'overflow-hidden'} ${flashClass} ${c.shield > 0 ? 'border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.5)]' : c.flammeBarrier ? 'border-yellow-400' : 'border-zinc-800'}`}>
               {c.spriteDir ? (
                 <div 
                   className={c.frameCount === 1 ? "animate-monster-breathe" : (c.id.startsWith('e_') ? "animate-monster-idle-ai" : "animate-monster-idle")}
@@ -1441,6 +1456,17 @@ function CombatGrid({ row, combatants, activeAttacker, slashTargetId, floatingTe
                 <div className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none">
                   <div className="w-[150%] h-[4px] bg-gradient-to-r from-transparent via-white to-transparent rotate-45 shadow-[0_0_10px_yellow] opacity-100 animate-out fade-out duration-150" />
                 </div>
+              )}
+
+              {/* Skill Effect Overlay — đè lên thẻ tướng mục tiêu */}
+              {c.id === effectTargetId && skillEffectType === 'gojo_skill1' && (
+                <GojoSkill1Effect onComplete={onCompleteEffect!} />
+              )}
+              {c.id === effectTargetId && skillEffectType === 'peter_skill1' && (
+                <PeterSkill1Effect onComplete={onCompleteEffect!} />
+              )}
+              {c.id === effectTargetId && skillEffectType === 'normal' && (
+                <NormalAttackEffect onComplete={onCompleteEffect!} />
               )}
             </div>
             
