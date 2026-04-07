@@ -111,8 +111,11 @@ export function GachaScreen() {
                             <span className="text-xl">
                               {{'shoes':'👟','hat':'🎩','armor':'🛡️','ring':'💍','belt':'🥋','artifact':'🔮'}[(result.item as any).type]}
                             </span>
-                            <span className="text-[9px] font-display text-foreground text-center mt-1 px-1 truncate w-full">
+                            <span className="text-[9px] font-display text-foreground text-center mt-1 px-1 truncate w-full leading-tight">
                               {(result.item as any).name}
+                            </span>
+                            <span className="text-[8px] font-black uppercase mt-0.5" style={{ color: { white: '#94a3b8', blue: '#60a5fa', purple: '#a855f7', gold: '#fbbf24', orange: '#fb923c', red: '#ef4444' }[(result.item as any).rarity] || '#fff' }}>
+                              {{ white: 'Trắng', blue: 'Lam', purple: 'Tím', gold: 'Vàng', orange: 'Cam', red: 'Đỏ' }[(result.item as any).rarity] || (result.item as any).rarity}
                             </span>
                           </>
                         )}

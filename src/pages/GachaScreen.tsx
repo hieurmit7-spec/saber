@@ -273,7 +273,12 @@ export default function GachaScreen() {
                             res.item.rarity === 'orange' ? 'bg-amber-500' : 'bg-transparent'
                           }`} />
                         </div>
-                        <span className="text-[10px] font-bold text-center px-2 line-clamp-2 leading-tight uppercase tracking-[0.1em] text-zinc-300">{res.item.name}</span>
+                        <span className="text-[10px] font-bold text-center px-1 line-clamp-1 leading-tight uppercase tracking-[0.1em] text-zinc-300">
+                          {res.item.name}
+                        </span>
+                        <span className="text-[8px] font-black uppercase mt-1 px-1 py-0.5 rounded-sm" style={{ backgroundColor: { white: '#1e293b', blue: '#1e3a8a', purple: '#581c87', gold: '#78350f', orange: '#7c2d12', red: '#7f1d1d' }[res.item.rarity] || '#000', color: { white: '#94a3b8', blue: '#60a5fa', purple: '#a855f7', gold: '#fbbf24', orange: '#fb923c', red: '#ef4444' }[res.item.rarity] || '#fff' }}>
+                          {{ white: 'Trắng', blue: 'Lam', purple: 'Tím', gold: 'Vàng', orange: 'Cam', red: 'Đỏ', rainbow: 'Phổ Quang', black: 'Huyền Thiết' }[res.item.rarity] || res.item.rarity}
+                        </span>
                       </>
                     )}
                   </div>

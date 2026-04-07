@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useGameStore, calculateCP, getCharacterTotalStats, STAR_BONUSES_MAP, type GameCharacter, type Equipment } from '@/stores/gameStore';
 import { Star, Shield, Zap, Heart, Sword, ArrowLeft, ChevronUp } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -16,7 +17,7 @@ function CharacterRoster({ characters, selectedId, onSelect }: {
   characters: any[]; selectedId: string | null; onSelect: (id: string) => void;
 }) {
   return (
-    <div className="w-20 bg-dark-surface/90 border-r border-border flex flex-col items-center py-4 gap-3 overflow-y-auto">
+    <div className="w-20 bg-dark-surface/90 border-r border-border flex flex-col items-center py-4 gap-3 overflow-y-auto custom-scrollbar">
       {characters.map((char) => (
         <button key={char.id} onClick={() => onSelect(char.id)}
           className={`relative w-14 h-14 rounded-full overflow-hidden border-2 transition-all shrink-0
@@ -99,6 +100,9 @@ function EquipSelectDialog() {
                 className={`p-2 rounded-lg border-2 ${RARITY_BORDER[item.rarity]} bg-secondary/30 flex flex-col items-center gap-1 hover:scale-105 transition-all`}>
                 <EquipmentIcon type={item.type} level={item.level || 0} size="sm" />
                 <span className="text-[9px] font-display text-foreground truncate w-full text-center">{item.name}</span>
+                <div className="text-[8px] font-black uppercase mb-1" style={{ color: { white: '#94a3b8', blue: '#60a5fa', purple: '#a855f7', gold: '#fbbf24', orange: '#fb923c', red: '#ef4444' }[item.rarity] || '#fff' }}>
+                  {{ white: 'Trắng', blue: 'Lam', purple: 'Tím', gold: 'Vàng', orange: 'Cam', red: 'Đỏ' }[item.rarity] || item.rarity}
+                </div>
                 <div className="text-[7px] text-muted-foreground">
                   {item.stats.hp ? <span>HP+{item.stats.hp} </span> : null}
                   {item.stats.dmg ? <span>DMG+{item.stats.dmg}</span> : null}
@@ -121,8 +125,9 @@ export function CharacterScreen() {
   
   const charactersData = (characters || []) as any[];
   const selected = charactersData.find((c) => c.id === selectedCharacterId) || charactersData[0];
-  const stats = selected ? getCharacterTotalStats(selected as GameCharacter) : null;
-  const cp = selected ? calculateCP(selected as GameCharacter) : 0;
+  
+  const stats = useMemo(() => selected ? getCharacterTotalStats(selected as GameCharacter) : null, [selected]);
+  const cp = useMemo(() => selected && stats ? calculateCP(selected as GameCharacter, stats) : 0, [selected, stats]);
 
   if (isLoading) return <div className="w-full h-screen bg-black flex items-center justify-center text-white">Loading characters...</div>;
   if (!selected || !stats) return null;
@@ -143,7 +148,7 @@ export function CharacterScreen() {
         )}
         <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-background/80 z-10" />
 
-        <div className="relative z-20 h-full flex flex-col p-4 overflow-y-auto">
+        <div className="relative z-20 h-full flex flex-col p-4 overflow-y-auto custom-scrollbar">
           {/* Header */}
           <div className="flex items-center gap-3 mb-4">
             <button onClick={() => setCurrentScreen('main')} className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-foreground transition-colors">
@@ -175,7 +180,7 @@ export function CharacterScreen() {
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-display text-xs text-gold tracking-widest uppercase">Nâng sao</h3>
               {selected.shards >= 10 && selected.stars < 6 && (
-                <button onClick={() => upgradeStar({ characterId: selected.id, newStar: selected.stars + 1, remainShards: selected.shards - 10 })}
+                <button onClick={() => upgradeStar({ characterId: selected.id, newStar: selected.stars + 1, remainingShards: selected.shards - 10 })}
                   className="flex items-center gap-1 gradient-gold text-primary-foreground text-[10px] font-display px-2 py-1 rounded-md">
                   <ChevronUp className="w-3 h-3" /> Nâng cấp
                 </button>

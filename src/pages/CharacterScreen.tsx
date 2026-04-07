@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Star, Footprints, HardHat, Shield, Disc, GripHorizontal, Sparkles, ArrowUpCircle } from "lucide-react";
+import { ChevronLeft, Star, Footprints, HardHat, Shield, Disc, GripHorizontal, Sparkles, ArrowUpCircle, ChevronUp, ChevronDown } from "lucide-react";
 import { useHydratedCharacters, useInventory, useEquipItem, useUpgradeStar, useUpgradeLevel, usePlayer, useMaterials, useBreakthrough } from "@/hooks/usePlayerData";
 import { 
   getCharacterTotalStats, 
@@ -43,7 +43,7 @@ export default function CharacterScreen() {
   if (!activeChar) return null;
 
   const totalStats = activeChar.isUnlocked ? getCharacterTotalStats(activeChar as any) : activeChar.baseStats;
-  const cp = activeChar.isUnlocked ? calculateCP(activeChar as any) : 0;
+  const cp = activeChar.isUnlocked ? calculateCP(activeChar as any, totalStats as any) : 0;
   const currentTier = getStarTier(activeChar.stars);
   const realmTitle = getRealmTitle(activeChar.realm_rank);
   const realmStage = getRealmStage(activeChar.realm_rank);
@@ -208,7 +208,7 @@ export default function CharacterScreen() {
         </div>
 
         {/* Right Column: Stats & Upgrade */}
-        <div className="w-80 flex flex-col gap-8 ml-8">
+        <div className="w-80 flex flex-col gap-8 ml-8 overflow-y-auto custom-scrollbar pr-2 h-full">
           <div className="bg-zinc-950/50 backdrop-blur-md border border-white/10 p-6 flex flex-col gap-4">
             {renderStars()}
             
@@ -295,20 +295,34 @@ export default function CharacterScreen() {
             Thông Tin Data
           </button>
 
-          <div className="flex flex-col gap-2 mt-4 px-3 py-3 bg-white/5 border border-white/10 max-h-[150px] overflow-y-auto custom-scrollbar">
-             <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">Mô tả Đột phá</h3>
-             {(STAR_BONUSES_MAP[activeChar.id] || []).length > 0 ? (
-               <div className="text-xs text-zinc-300 space-y-1">
-                 {STAR_BONUSES_MAP[activeChar.id].map(b => (
-                   <div key={b.stars} className="flex gap-2">
-                     <span className={`font-bold min-w-[32px] inline-block ${activeChar.stars >= b.stars ? 'text-amber-400' : 'text-zinc-600'}`}>★{b.stars}</span>
-                     <span className={activeChar.stars >= b.stars ? 'text-zinc-200' : 'text-zinc-600'}>{b.desc}</span>
+          <div className="mt-4 px-3 py-3 bg-white/5 border border-white/10 relative group">
+            <div className="flex justify-between items-center mb-1 border-b border-white/5 pb-1">
+              <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest">Mô tả Đột phá</h3>
+              <div className="flex flex-col -space-y-1">
+                <ChevronUp className="w-3 h-3 text-amber-500/50" />
+                <ChevronDown className="w-3 h-3 text-amber-500/50" />
+              </div>
+            </div>
+            
+            <div className="relative">
+              {/* Custom Track Background for Visuals */}
+              <div className="absolute right-0 top-0 bottom-0 w-[10px] bg-black/40 rounded-full border-l border-white/5 pointer-events-none" />
+              
+              <div className="flex flex-col gap-2 max-h-[100px] overflow-y-auto custom-scrollbar pr-3 mt-2 scroll-smooth">
+                 {(STAR_BONUSES_MAP[activeChar.id] || []).length > 0 ? (
+                   <div className="text-xs text-zinc-300 space-y-1">
+                     {STAR_BONUSES_MAP[activeChar.id].map(b => (
+                       <div key={b.stars} className="flex gap-2">
+                         <span className={`font-bold min-w-[32px] inline-block ${activeChar.stars >= b.stars ? 'text-amber-400' : 'text-zinc-600'}`}>★{b.stars}</span>
+                         <span className={activeChar.stars >= b.stars ? 'text-zinc-200' : 'text-zinc-600'}>{b.desc}</span>
+                       </div>
+                     ))}
                    </div>
-                 ))}
-               </div>
-             ) : (
-               <div className="text-xs text-zinc-500 italic">Nhân vật này chưa có mô tả đột phá.</div>
-             )}
+                 ) : (
+                   <div className="text-xs text-zinc-500 italic">Nhân vật này chưa có mô tả đột phá.</div>
+                 )}
+              </div>
+            </div>
           </div>
 
           <div className="flex flex-col gap-3 mt-4">

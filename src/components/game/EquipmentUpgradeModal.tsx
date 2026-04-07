@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, ArrowRight, Sparkles, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Equipment } from '@/stores/gameStore';
+import { Equipment, STAT_BONUS_TABLE, STAT_SCALE_FACTORS } from '@/stores/gameStore';
 import { useMaterials, useUpgradeEquipment } from '@/hooks/usePlayerData';
 import { toast } from 'sonner';
 import { EquipmentIcon } from './EquipmentIcon';
@@ -31,19 +31,7 @@ const UPGRADE_TABLE: UpgradeData[] = [
   { base: 1, max: 1, bonus: 0.1 },    // +15 -> +16
 ];
 
-const STAT_BONUS_TABLE = [
-  0, 0.05, 0.10, 0.15, 0.20,
-  0.30, 0.40, 0.50, 0.65,
-  0.80, 1.00, 1.25, 1.55,
-  1.90, 2.30, 2.80, 3.50
-];
-
-const STAT_SCALE_FACTORS = {
-  hp: 1.0,
-  dmg: 0.25,
-  armor: 0.18,
-  speed: 0.05
-};
+// Removed local STAT_BONUS_TABLE and STAT_SCALE_FACTORS, using global ones from gameStore.ts
 
 export default function EquipmentUpgradeModal({ 
   equipment, 

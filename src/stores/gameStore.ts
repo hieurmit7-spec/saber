@@ -1,17 +1,18 @@
 import { create } from 'zustand';
 
 export const STAT_SCALE_FACTORS = {
-  hp: 200,      // +200 HP per equipment level unit
-  speed: 2,     // +2 Speed per equipment level unit
-  armor: 15,    // +15 Armor per equipment level unit
-  dmg: 12,      // +12 DMG per equipment level unit
+  hp: 1.0,
+  dmg: 0.25,
+  armor: 0.18,
+  speed: 0.05
 };
 
-export const STAT_BONUS_TABLE: Record<number, number> = {
-  0: 0, 1: 0.1, 2: 0.20, 3: 0.30, 4: 0.40, 5: 0.55, 
-  6: 0.70, 7: 0.85, 8: 1.0, 9: 1.2, 10: 1.5, 
-  11: 1.8, 12: 2.2, 13: 2.6, 14: 3.1, 15: 3.7, 16: 4.5
-};
+export const STAT_BONUS_TABLE = [
+  0, 0.05, 0.10, 0.15, 0.20,
+  0.30, 0.40, 0.50, 0.65,
+  0.80, 1.00, 1.25, 1.55,
+  1.90, 2.30, 2.80, 3.50
+];
 
 // --- STAR LIMIT BREAK SYSTEM (46 STEPS) ---
 export const STAR_TIERS = [
@@ -64,6 +65,12 @@ export function getRealmStage(realmRank: number) {
   if (realmRank < 5) return { label: "Phàm Nhân", color: "text-zinc-400" };
   if (realmRank < 9) return { label: "Bất Tử", color: "text-amber-500" };
   return { label: "Vô Ưu", color: "text-purple-400" };
+}
+
+export interface GachaResult {
+  type: 'character' | 'equipment' | 'material';
+  item: any;
+  isDuplicate?: boolean;
 }
 
 export interface Equipment {
@@ -127,12 +134,17 @@ interface GameState {
   showEquipSelect: { charId: string; slot: keyof GameCharacter['equipment'] } | null;
   pvpRank: number;
   pvpStars: number;
+  currency: number;
+  pityCounter: number;
+  gachaResults: GachaResult[];
 
   setCurrentScreen: (screen: GameState['currentScreen']) => void;
   selectCharacter: (id: string | null) => void;
   setShowCalendar: (show: boolean) => void;
   setShowEquipSelect: (val: GameState['showEquipSelect']) => void;
   addPvpStar: () => void;
+  rollGacha: (count: 1 | 10) => void;
+  clearGachaResults: () => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -142,6 +154,9 @@ export const useGameStore = create<GameState>((set) => ({
   showEquipSelect: null,
   pvpRank: 1,
   pvpStars: 0,
+  currency: 1000,
+  pityCounter: 0,
+  gachaResults: [],
 
   setCurrentScreen: (screen) => set({ currentScreen: screen }),
   selectCharacter: (id) => set({ selectedCharacterId: id }),
@@ -151,14 +166,16 @@ export const useGameStore = create<GameState>((set) => ({
     pvpStars: s.pvpStars >= 4 ? 0 : s.pvpStars + 1,
     pvpRank: s.pvpStars >= 4 ? s.pvpRank + 1 : s.pvpRank
   })),
+  rollGacha: (count) => set(s => ({ currency: s.currency - count * 100, pityCounter: s.pityCounter + count })),
+  clearGachaResults: () => set({ gachaResults: [] }),
 }));
 
 export function getCharacterTotalStats(char: GameCharacter) {
   const eq = char.equipment;
   const bonus = { hp: 0, speed: 0, armor: 0, dmg: 0 };
   
-  // Equipment stats
-  Object.values(eq).forEach((item) => {
+  // Standardized Scaling Formula: baseStat * (1 + bonusTableValue * scaleFactor)
+  Object.entries(eq).forEach(([slot, item]) => {
     if (item) {
       const level = item.level || 0;
       const b = STAT_BONUS_TABLE[level] || 0;
@@ -183,7 +200,7 @@ export function getCharacterTotalStats(char: GameCharacter) {
   const totalArmor = (char.baseStats.armor * levelMult) + bonus.armor;
   const totalSpeed = char.baseStats.speed + bonus.speed;
 
-  // Peter Specific Bonuses
+  // Character-Specific Multipliers
   const hpMultiplier = char.id === 'peter' && char.stars >= 4 ? 1.3 : 1;
   const armorMultiplier = char.id === 'peter' && char.stars >= 4 ? 1.2 : 1;
 
@@ -195,13 +212,11 @@ export function getCharacterTotalStats(char: GameCharacter) {
   };
 }
 
-export function calculateCP(char: GameCharacter) {
-  const stats = getCharacterTotalStats(char);
+export function calculateCP(char: GameCharacter, precalculatedStats?: ReturnType<typeof getCharacterTotalStats>) {
+  const stats = precalculatedStats || getCharacterTotalStats(char);
   // CP formula: weighted sum * star progress factor
   const baseCP = (stats.hp * 0.4) + (stats.dmg * 10) + (stats.speed * 25) + (stats.armor * 2);
   
-  // Star factor: 1 + (stars * 0.2)
-  // At 46 stars, this is 1 + 9.2 = 10.2x multiplier
   const starFactor = 1 + (char.stars * 0.2);
   
   return Math.floor(baseCP * starFactor);
