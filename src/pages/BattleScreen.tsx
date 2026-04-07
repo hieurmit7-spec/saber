@@ -11,6 +11,7 @@ import { getCharacterTotalStats } from "@/stores/gameStore";
 import { getOpponentHydratedCharacters } from "@/services/playerService";
 import { SABER, SASUKE, PETER, GOJO, FRIEREN, BASE_CHARACTERS } from "@/constants/gameData";
 import { getRankInfo } from "@/lib/rankHelper";
+import { STAGE_1_MONSTERS, STAGE_1_BOSS } from "@/constants/monsterData";
 
 interface CombatEntity {
   id: string; baseId: string; name: string; isEnemy: boolean;
@@ -28,6 +29,8 @@ interface CombatEntity {
   canTargetBackRow?: boolean; // Tương lai: tướng có kỹ năng xưỳng hàng sau
   skill1Cooldown: number;    // Tracks skill 1 cooldown
   videoAvatar?: string;
+  spriteDir?: string;
+  frameCount?: number;
   position: number; state: 'idle' | 'attacking' | 'dead';
   stars: number;
   damageDealt: number;
@@ -211,12 +214,55 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
     // PvE / Private modes
     let mult = mode === 'pve' ? pveLevel : 5;
     
-    if (mode === 'pve' && pveLevel === 7) {
-      list.push({ id: 'e0', baseId: 'boss_dragon', name: 'Nhện Chú Vương', isEnemy: true, maxHp: 5000, hp: 5000, speed: 100, dmg: 400, armor: 1000, heat: 0, shield: 0, izanagiUsed: false, saberReviveUsed: false, stunnedTurns: 0, speedDebuffTurns: 0, skill1Cooldown: 0, videoAvatar: '', position: 2, state: 'idle', stars: 6, damageDealt: 0, damageTaken: 0, healingDone: 0 });
+    if (mode === 'pve') {
+      if (pveLevel === 7) {
+        // BOSS LEVEL
+        list.push({
+          id: 'e0',
+          baseId: STAGE_1_BOSS.id,
+          name: STAGE_1_BOSS.name,
+          isEnemy: true,
+          maxHp: STAGE_1_BOSS.hp,
+          hp: STAGE_1_BOSS.hp,
+          speed: STAGE_1_BOSS.speed,
+          dmg: STAGE_1_BOSS.dmg,
+          armor: STAGE_1_BOSS.armor,
+          heat: 0, shield: 0, izanagiUsed: false, saberReviveUsed: false, stunnedTurns: 0, speedDebuffTurns: 0, skill1Cooldown: 0,
+          spriteDir: STAGE_1_BOSS.spriteDir,
+          frameCount: STAGE_1_BOSS.frameCount,
+          position: 2, state: 'idle', stars: 6, damageDealt: 0, damageTaken: 0, healingDone: 0
+        });
+      } else {
+        // Random 2-3 monsters from Stage 1 pool
+        const count = pveLevel <= 3 ? 2 : 3;
+        const pool = [...STAGE_1_MONSTERS].sort(() => 0.5 - Math.random());
+        const selected = pool.slice(0, count);
+        
+        selected.forEach((m, idx) => {
+          const mMult = 0.8 + (pveLevel * 0.2); // Scaling multiplier
+          list.push({
+            id: `e_${idx}`,
+            baseId: m.id,
+            name: m.name,
+            isEnemy: true,
+            maxHp: Math.floor(m.hp * mMult),
+            hp: Math.floor(m.hp * mMult),
+            speed: m.speed,
+            dmg: Math.floor(m.dmg * mMult),
+            armor: Math.floor(m.armor * mMult),
+            heat: 0, shield: 0, izanagiUsed: false, saberReviveUsed: false, stunnedTurns: 0, speedDebuffTurns: 0, skill1Cooldown: 0,
+            spriteDir: m.spriteDir,
+            frameCount: m.frameCount,
+            position: idx === 0 ? 0 : idx === 1 ? 2 : 4,
+            state: 'idle', stars: 1, damageDealt: 0, damageTaken: 0, healingDone: 0
+          });
+        });
+      }
       return list;
     }
+
+    // Default Fallback
     list.push({ id: 'e1', baseId: 'goblin', name: 'Thích Khách', isEnemy: true, maxHp: 500 * mult, hp: 500 * mult, speed: 80, dmg: 100 * mult, armor: 200 * mult, heat: 0, shield: 0, izanagiUsed: false, saberReviveUsed: false, stunnedTurns: 0, speedDebuffTurns: 0, skill1Cooldown: 0, videoAvatar: '', position: 0, state: 'idle', stars: 1, damageDealt: 0, damageTaken: 0, healingDone: 0 });
-    list.push({ id: 'e2', baseId: 'slime', name: 'Ma Vật', isEnemy: true, maxHp: 800 * mult, hp: 800 * mult, speed: 60, dmg: 80 * mult, armor: 300 * mult, heat: 0, shield: 0, izanagiUsed: false, saberReviveUsed: false, stunnedTurns: 0, speedDebuffTurns: 0, skill1Cooldown: 0, videoAvatar: '', position: 2, state: 'idle', stars: 1, damageDealt: 0, damageTaken: 0, healingDone: 0 });
     return list;
   };
 
@@ -1368,11 +1414,22 @@ function CombatGrid({ row, combatants, activeAttacker, slashTargetId, floatingTe
             )}
 
             <div className={`w-24 h-24 rounded-lg bg-black border-2 transition-all duration-100 relative overflow-hidden flex items-center justify-center ${flashClass} ${c.shield > 0 ? 'border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.5)]' : c.flammeBarrier ? 'border-yellow-400' : 'border-zinc-800'}`}>
-              <img 
-                src={c.videoAvatar || "/placeholder-avatar.png"} 
-                className={`w-full h-full object-cover ${c.hp <= 0 ? 'grayscale' : ''}`} 
-              />
-              {!c.baseId.match(/saber|sasuke|peter|gojo|frieren/) && <div className="text-4xl">{c.isEnemy ? '👹' : '😎'}</div>}
+              {c.spriteDir ? (
+                <div 
+                  className={c.frameCount === 1 ? "animate-monster-breathe" : (c.id.startsWith('e_') ? "animate-monster-idle-ai" : "animate-monster-idle")}
+                  style={{
+                    backgroundImage: `url("${c.spriteDir}/Idle.png")`,
+                    transform: c.frameCount === 1 ? 'none' : 'scale(1.2)', 
+                    imageRendering: 'pixelated'
+                  }}
+                />
+              ) : (
+                <img 
+                  src={c.videoAvatar || "/placeholder-avatar.png"} 
+                  className={`w-full h-full object-cover ${c.hp <= 0 ? 'grayscale' : ''}`} 
+                />
+              )}
+              {!c.baseId.match(/saber|sasuke|peter|gojo|frieren/) && !c.spriteDir && <div className="text-4xl">{c.isEnemy ? '👹' : '😎'}</div>}
               
               {/* Susanoo Aura Overlay */}
               {c.baseId === 'sasuke' && c.shield > 0 && (

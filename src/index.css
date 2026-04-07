@@ -216,3 +216,49 @@
   z-index: 5;
   pointer-events: none;
 }
+
+/* --- Monster Sprite Sheet Animations --- */
+@keyframes monster-sprite-idle {
+  from { background-position-x: 0; }
+  to { background-position-x: -896px; }
+}
+
+@keyframes monster-sprite-idle-ai {
+  from { background-position-x: -64px; }
+  to { background-position-x: -960px; } /* -64 - (128 * 7) */
+}
+
+@keyframes monster-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05) translateY(-2px); }
+}
+
+.animate-monster-idle {
+  width: 128px;
+  height: 128px;
+  background-size: 896px auto; 
+  background-position: 0 center;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  animation: monster-sprite-idle 0.8s steps(7) infinite;
+}
+
+.animate-monster-idle-ai {
+  width: 128px;
+  height: 128px;
+  background-size: 1024px auto; 
+  background-position: -64px center;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  animation: monster-sprite-idle-ai 0.8s steps(7) infinite;
+}
+
+.animate-monster-breathe {
+  width: 128px;
+  height: 128px;
+  background-size: contain;
+  background-position: center center;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  animation: monster-breathe 3s ease-in-out infinite;
+}
