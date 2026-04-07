@@ -15,6 +15,7 @@ import { STAGE_1_MONSTERS, STAGE_1_BOSS } from "@/constants/monsterData";
 import NormalAttackEffect from "@/components/game/NormalAttackEffect";
 import GojoSkill1Effect from "@/components/game/GojoSkill1Effect";
 import PeterSkill1Effect from "@/components/game/PeterSkill1Effect";
+import SasukeSkill1Effect from "@/components/game/SasukeSkill1Effect";
 
 interface CombatEntity {
   id: string; baseId: string; name: string; isEnemy: boolean;
@@ -72,7 +73,7 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
 
   const [activeAttacker, setActiveAttacker] = useState<{ id: string, attackerPos: number, targetPos: number, isEnemy: boolean, targetIsEnemy: boolean } | null>(null);
   const [slashTargetId, setSlashTargetId] = useState<string | null>(null);
-  const [activeSkillEffect, setActiveSkillEffect] = useState<'gojo_skill1' | 'peter_skill1' | 'normal' | null>(null);
+  const [activeSkillEffect, setActiveSkillEffect] = useState<'gojo_skill1' | 'peter_skill1' | 'sasuke_skill1' | 'normal' | null>(null);
   const [effectTargetId, setEffectTargetId] = useState<string | null>(null);
   const [floatingTexts, setFloatingTexts] = useState<{ id: string, targetId: string, dmg: number | string, isSkill?: boolean, isHeal?: boolean }[]>([]);
   const [matchResult, setMatchResult] = useState<'victory' | 'defeat' | null>(null);
@@ -397,7 +398,10 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
         return scoreB - scoreA;
       })[0];
       if (mvp && mvp.baseId === 'gojo') {
-         new Audio('/videos/gojo sound 1.m4a').play().catch(e => console.error(e));
+         new Audio('/videos/gojo sound 1.MP3').play().catch(e => console.error(e));
+      }
+      if (mvp && mvp.baseId === 'peter') {
+         new Audio('/videos/peter_sound2.MP3').play().catch(e => console.error(e));
       }
 
       if (mode === 'pve') {
@@ -535,6 +539,8 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
         currentEntity.skill1Cooldown = 3; // Peter CD = 3
         skillName = 'Nắm Đấm Say Xỉn';
         dmgMultiplier = 2.2;
+        // Phát âm thanh chiêu 1 Peter
+        new Audio('/videos/peter_sound1.MP3').play().catch(e => console.error(e));
       } else if (currentEntity.baseId === 'saber') {
         currentEntity.skill1Cooldown = 0; // Saber CD = 0
         skillName = 'Strike Air';
@@ -601,6 +607,8 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
       setActiveSkillEffect('gojo_skill1');
     } else if (currentEntity.baseId === 'peter' && isSkill1) {
       setActiveSkillEffect('peter_skill1');
+    } else if (currentEntity.baseId === 'sasuke' && isSkill1) {
+      setActiveSkillEffect('sasuke_skill1');
     } else {
       setActiveSkillEffect('normal');
     }
@@ -689,7 +697,7 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
         } : c));
         
         // Phát âm thanh của chiêu 1 và đợi kết quả (Chỉ phát ở tốc độ x1 hoặc không đồng bộ được nếu speedMult cao = có thể kết thúc sớm nếu cần, nhưng yêu cầu là khớp hoàn toàn với âm thanh)
-        const audio = new Audio('/videos/gojo sound 2.m4a');
+        const audio = new Audio('/videos/gojo sound 2.MP3');
         audio.playbackRate = speedMult; // Chỉnh tốc độ phát nhạc theo tốc độ game
         audio.play().catch(e => console.error(e));
         audio.onended = () => {
@@ -777,7 +785,11 @@ export default function BattleScreen({ mode }: { mode: 'pve' | 'private' | 'rank
         
         // Gojo Sound 1 on Kill
         if (target.hp === 0 && attacker.baseId === 'gojo') {
-           new Audio('/videos/gojo sound 1.m4a').play().catch(e => console.error(e));
+           new Audio('/videos/gojo sound 1.MP3').play().catch(e => console.error(e));
+        }
+        // Peter Sound 2 on Kill
+        if (target.hp === 0 && attacker.baseId === 'peter') {
+           new Audio('/videos/peter_sound2.MP3').play().catch(e => console.error(e));
         }
       }
 
@@ -1464,6 +1476,9 @@ function CombatGrid({ row, combatants, activeAttacker, slashTargetId, floatingTe
               )}
               {c.id === effectTargetId && skillEffectType === 'peter_skill1' && (
                 <PeterSkill1Effect onComplete={onCompleteEffect!} />
+              )}
+              {c.id === effectTargetId && skillEffectType === 'sasuke_skill1' && (
+                <SasukeSkill1Effect onComplete={onCompleteEffect!} />
               )}
               {c.id === effectTargetId && skillEffectType === 'normal' && (
                 <NormalAttackEffect onComplete={onCompleteEffect!} />

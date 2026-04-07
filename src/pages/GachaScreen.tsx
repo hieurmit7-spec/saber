@@ -174,7 +174,7 @@ export default function GachaScreen() {
           onClick={() => setCurrentBanner('peter')}
           className={`flex items-center gap-3 p-3 border transition-colors bg-black/60 backdrop-blur ${currentBanner === 'peter' ? 'border-green-500' : 'border-white/10 hover:border-white/30'}`}
         >
-          <img src="/videos/peter.png" className="w-10 h-10 object-cover border border-green-500/50" />
+          <img src="/videos/peter.gif" className="w-10 h-10 object-cover border border-green-500/50" />
           <div className="text-left"><div className="text-xs font-bold text-green-500">PETER</div><div className="text-[10px] text-zinc-400">Rate UP</div></div>
         </button>
         <button 
@@ -229,7 +229,7 @@ export default function GachaScreen() {
                           ) : res.item.id === 'saber' ? (
                             <img src="/videos/saber-avatar.gif" className="w-full h-full object-cover saturate-150" />
                           ) : res.item.id === 'peter' ? (
-                            <img src="/videos/peter.png" className="w-full h-full object-cover saturate-150" />
+                            <img src="/videos/peter.gif" className="w-full h-full object-cover saturate-150" />
                           ) : res.item.id === 'gojo' ? (
                             <img src="/videos/gojo.gif" className="w-full h-full object-cover saturate-150" />
                           ) : res.item.id === 'frieren' ? (

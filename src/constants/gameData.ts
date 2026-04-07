@@ -90,7 +90,7 @@ export const PETER: GameCharacter = {
       type: 'ultimate',
     },
   ],
-  videoAvatar: '/videos/peter.png',
+  videoAvatar: '/videos/peter.gif',
   videoBanner: '/videos/peter ultimate.mp4',
 };
 
