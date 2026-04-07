@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, ArrowRight, Sparkles, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Equipment, STAT_BONUS_TABLE, STAT_SCALE_FACTORS } from '@/stores/gameStore';
-import { useMaterials, useUpgradeEquipment } from '@/hooks/usePlayerData';
+import { useMaterials, useUpgradeEquipment, usePlayer } from '@/hooks/usePlayerData';
 import { toast } from 'sonner';
 import { EquipmentIcon } from './EquipmentIcon';
 
@@ -31,7 +31,17 @@ const UPGRADE_TABLE: UpgradeData[] = [
   { base: 1, max: 1, bonus: 0.1 },    // +15 -> +16
 ];
 
-// Removed local STAT_BONUS_TABLE and STAT_SCALE_FACTORS, using global ones from gameStore.ts
+const RARITY_GOLD_MULT: Record<string, number> = {
+  white: 1.0,
+  green: 1.2,
+  blue: 1.5,
+  purple: 2.0,
+  gold: 3.5,
+  orange: 8.0,
+  red: 20.0,
+  black: 100.0,
+  rainbow: 500.0
+};
 
 export default function EquipmentUpgradeModal({ 
   equipment, 
@@ -43,6 +53,7 @@ export default function EquipmentUpgradeModal({
   inline?: boolean;
 }) {
   const userId = localStorage.getItem('fern_user_id') || '';
+  const { data: player } = usePlayer(userId);
   const { data: materials } = useMaterials(userId);
   const { mutate: upgrade, isPending } = useUpgradeEquipment(userId);
   
@@ -68,11 +79,14 @@ export default function EquipmentUpgradeModal({
   const upgradeData = UPGRADE_TABLE[currentLevel];
   const rate = Math.min(upgradeData.max, (upgradeData.base * stoneMultiplier) + (stonesCount * upgradeData.bonus * stoneMultiplier));
   
+  const goldCost = Math.floor((currentLevel + 1) * 1000 * (RARITY_GOLD_MULT[equipment.rarity] || 1));
+
   const stoneId = `upgrade_stone_lv${selectedStoneLv}`;
   const ownedStones = materials?.find(m => m.material_id === stoneId)?.amount || 0;
 
   const handleUpgrade = () => {
     if (stonesCount > ownedStones) return toast.error("Không đủ đá!");
+    if ((player?.coins || 0) < goldCost) return toast.error("Không đủ Vàng!");
     
     setIsUpgrading(true);
     const roll = Math.random() * 100;
@@ -82,7 +96,8 @@ export default function EquipmentUpgradeModal({
       equipmentId: equipment.id,
       stoneId,
       stonesCount,
-      success
+      success,
+      goldCost
     }, {
       onSuccess: () => {
         if (success) {
@@ -144,9 +159,9 @@ export default function EquipmentUpgradeModal({
               <div key={key} className="flex items-center justify-between text-sm">
                 <span className="text-zinc-500 uppercase font-bold tracking-widest">{key}</span>
                 <div className="flex items-center gap-4">
-                  <span className="text-white font-mono">{currentStat(val, sKey)}</span>
+                  <span className="text-white font-mono">{currentStat(val as number, sKey)}</span>
                   <ArrowRight className="w-4 h-4 text-zinc-700" />
-                  <span className="text-green-500 font-black font-mono">{previewStat(val, sKey)}</span>
+                  <span className="text-green-500 font-black font-mono">{previewStat(val as number, sKey)}</span>
                 </div>
               </div>
             );
@@ -193,7 +208,15 @@ export default function EquipmentUpgradeModal({
                 className="w-20 bg-zinc-900 border border-white/10 px-2 py-1 text-right font-mono focus:border-amber-500 outline-none"
               />
             </div>
-            <div className="flex justify-between items-center bg-amber-500/10 p-3 border border-amber-500/20">
+            
+            <div className="flex justify-between items-center text-xs pt-2">
+              <span className="text-zinc-500 uppercase font-bold tracking-widest">Chi phí Vàng</span>
+              <span className={(player?.coins || 0) < goldCost ? "text-red-500 font-bold" : "text-amber-500 font-bold"}>
+                {goldCost.toLocaleString()} Vàng
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center bg-amber-500/10 p-3 border border-amber-500/20 mt-4">
               <span className="text-[10px] text-amber-500 font-black uppercase tracking-widest flex items-center gap-2">
                 <AlertCircle className="w-3 h-3" /> Tỉ lệ thành công
               </span>
@@ -203,7 +226,7 @@ export default function EquipmentUpgradeModal({
         </div>
 
         <Button 
-          disabled={isUpgrading || isPending || ownedStones < stonesCount || availableStones.length === 0}
+          disabled={isUpgrading || isPending || ownedStones < stonesCount || (player?.coins || 0) < goldCost || availableStones.length === 0}
           onClick={handleUpgrade}
           className="w-full h-16 shrink-0 bg-amber-600 hover:bg-amber-500 text-white font-black text-lg uppercase tracking-[0.3em] shadow-[0_4px_20px_rgba(245,158,11,0.3)] disabled:opacity-50 mt-auto"
         >

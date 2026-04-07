@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getPlayerInfo, getPlayerCharacters, equipItemToCharacter, upgradeCharacterStar, upgradeCharacterLevel, updatePlayerKC, updatePlayerCoins, breakthroughCharacter, updateTeamSetup, getLeaderboard, getArenaOpponents, updatePlayerProfile, upgradeEquipment } from '@/services/playerService';
-import { getInventory, getPlayerMaterials, deleteEquipments } from '@/services/equipmentService';
+import { getPlayerInfo, getPlayerCharacters, equipItemToCharacter, upgradeCharacterStar, upgradeCharacterLevel, updatePlayerKC, updatePlayerCoins, breakthroughCharacter, updateTeamSetup, getLeaderboard, getArenaOpponents, updatePlayerProfile, upgradeEquipment, buyShopItem } from '@/services/playerService';
+import { getInventory, getPlayerMaterials, deleteEquipments, transferEquipmentLevel } from '@/services/equipmentService';
 import { rollGachaRPC } from '@/services/gachaService';
 import { SABER, SASUKE, PETER, GOJO, FRIEREN, BASE_CHARACTERS } from '@/constants/gameData';
 import { useMemo } from 'react';
@@ -251,12 +251,23 @@ export const useUpgradeEquipment = (userId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ equipmentId, stoneId, stonesCount, success }: { equipmentId: string, stoneId: string, stonesCount: number, success: boolean }) =>
-      upgradeEquipment(userId, equipmentId, stonesCount, stoneId, success),
+    mutationFn: async ({ equipmentId, stoneId, stonesCount, success, goldCost }: { equipmentId: string, stoneId: string, stonesCount: number, success: boolean, goldCost: number }) => {
+      const player = await getPlayerInfo(userId);
+      if (player.coins < goldCost) throw new Error("Không đủ Vàng để cường hóa!");
+      
+      // Deduct gold
+      await updatePlayerCoins(userId, player.coins - goldCost);
+      // Run RPC
+      return upgradeEquipment(userId, equipmentId, stonesCount, stoneId, success);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['characters', userId] });
       queryClient.invalidateQueries({ queryKey: ['inventory', userId] });
       queryClient.invalidateQueries({ queryKey: ['materials', userId] });
+      queryClient.invalidateQueries({ queryKey: ['player', userId] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Lỗi cường hóa!");
     }
   });
 };
@@ -273,6 +284,43 @@ export const useDeleteEquipments = (userId: string) => {
     },
     onError: (err: any) => {
       toast.error('Lỗi khi tiêu hủy: ' + err.message);
+    }
+  });
+};
+
+export const useTransferEquipment = (userId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: { sourceId: string, targetId: string, coinCost: number, kcCost: number, ticketAmount: number }) =>
+      transferEquipmentLevel(userId, params.sourceId, params.targetId, params.coinCost, params.kcCost, params.ticketAmount),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory', userId] });
+      queryClient.invalidateQueries({ queryKey: ['characters', userId] });
+      queryClient.invalidateQueries({ queryKey: ['materials', userId] });
+      queryClient.invalidateQueries({ queryKey: ['player', userId] });
+      toast.success('Đã chuyển cấp cường hóa thành công!');
+    },
+    onError: (err: any) => {
+      toast.error('Lỗi khi chuyển hóa: ' + err.message);
+    }
+  });
+};
+
+export const useBuyShopItem = (userId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: { itemId: string, costKC: number, amount: number, itemType: 'shard' | 'material' }) =>
+      buyShopItem(userId, params.itemId, params.costKC, params.amount, params.itemType),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['player', userId] });
+      queryClient.invalidateQueries({ queryKey: ['materials', userId] });
+      queryClient.invalidateQueries({ queryKey: ['characters', userId] });
+      toast.success('Mua vật phẩm thành công!');
+    },
+    onError: (err: any) => {
+      toast.error('Mua thất bại: ' + err.message);
     }
   });
 };

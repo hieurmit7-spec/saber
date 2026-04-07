@@ -224,3 +224,13 @@ export const getOpponentHydratedCharacters = async (opponentId: string) => {
   }));
 };
 
+export const buyShopItem = async (userId: string, itemId: string, costKC: number, amount: number, itemType: 'shard' | 'material') => {
+  const { error } = await (supabase as any).rpc('rpc_buy_shop_item', {
+    p_player_id: userId,
+    p_item_id: itemId,
+    p_cost_kc: costKC,
+    p_amount: amount,
+    p_item_type: itemType
+  });
+  if (error) throw error;
+};

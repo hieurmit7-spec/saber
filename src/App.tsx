@@ -15,6 +15,8 @@ import AbilityScreen from "./pages/AbilityScreen.tsx";
 import TeamSetupScreen from "./pages/TeamSetupScreen.tsx";
 import LeaderboardScreen from "./pages/LeaderboardScreen.tsx";
 import PlayerProfileScreen from "./pages/PlayerProfileScreen.tsx";
+import ShopScreen from "./pages/ShopScreen.tsx";
+import TransferScreen from "./pages/TransferScreen.tsx";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +35,8 @@ const App = () => {
             <Route path="/character" element={isAuthenticated ? <CharacterScreen /> : <Navigate to="/auth" />} />
             <Route path="/gacha" element={isAuthenticated ? <GachaScreen /> : <Navigate to="/auth" />} />
             <Route path="/bag" element={isAuthenticated ? <BagScreen /> : <Navigate to="/auth" />} />
+            <Route path="/shop" element={isAuthenticated ? <ShopScreen /> : <Navigate to="/auth" />} />
+            <Route path="/transfer" element={isAuthenticated ? <TransferScreen /> : <Navigate to="/auth" />} />
             <Route path="/battle" element={isAuthenticated ? <BattleMenu /> : <Navigate to="/auth" />} />
             <Route path="/abilities" element={isAuthenticated ? <AbilityScreen /> : <Navigate to="/auth" />} />
             <Route path="/team" element={isAuthenticated ? <TeamSetupScreen /> : <Navigate to="/auth" />} />
