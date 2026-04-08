@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Star, Footprints, HardHat, Shield, Disc, GripHorizontal, Sparkles, ArrowUpCircle, ChevronUp, ChevronDown, Sword } from "lucide-react";
+import { ChevronLeft, Star, Shield, Sparkles, ArrowUpCircle, Sword, Zap, Brain, Crosshair } from "lucide-react";
 import { useHydratedCharacters, useInventory, useEquipItem, useUpgradeStar, useUpgradeLevel, usePlayer, useMaterials, useBreakthrough } from "@/hooks/usePlayerData";
 import { 
   getCharacterTotalStats, 
@@ -38,8 +38,7 @@ export default function CharacterScreen() {
 
   const activeChar = FULL_CHARACTERS.find(c => c.id === selectedCharId);
 
-  if (charsLoading || invLoading) return <div className="w-full h-screen bg-black flex items-center justify-center text-white">Loading Archive...</div>;
-  
+  if (charsLoading || invLoading) return <div className="w-full h-screen bg-zinc-950 flex items-center justify-center text-amber-500 font-display text-2xl tracking-[1em] animate-pulse">KHỞI TẠO LINH HỒN...</div>;
   if (!activeChar) return null;
 
   const totalStats = activeChar.isUnlocked ? getCharacterTotalStats(activeChar as any) : activeChar.baseStats;
@@ -55,15 +54,10 @@ export default function CharacterScreen() {
     setShowEquipSelect(null);
   };
 
-  // New Shard Requirement Logic: Base 20 + 5 per star upgrade
   const getRequiredShards = (currentStar: number) => 20 + (currentStar - 1) * 5;
 
   const handleUpgrade = () => {
     if (!activeChar || !activeChar.isUnlocked) return;
-    if (activeChar.stars >= 46) {
-      toast.info('Đã đạt đỉnh phong Thất Sắc 5 Sao!');
-      return;
-    }
     const required = getRequiredShards(activeChar.stars);
     if (activeChar.shards >= required) {
       upgradeStarMutation.mutate({ 
@@ -76,533 +70,531 @@ export default function CharacterScreen() {
     }
   };
 
-  const renderStars = () => {
-    // Show current tier range stars
-    const [min, max] = currentTier.range;
-    const countInTier = max - min + 1;
-    const activeInTier = activeChar.stars - min + 1;
-
-    return (
-      <div className="flex flex-col items-center gap-1">
-        <div className="flex gap-1">
-          {Array.from({ length: countInTier }).map((_, i) => {
-            const isActive = i < activeInTier;
-            let starColor = currentTier.color || '#white';
-            
-            // Handle multi-color tiers
-            if (currentTier.colors) {
-              starColor = currentTier.colors[i % currentTier.colors.length];
-            }
-
-            return (
-              <Star 
-                key={i} 
-                className={`w-5 h-5 transition-all duration-500`} 
-                style={{ 
-                  color: isActive ? starColor : '#1f2937', 
-                  fill: isActive ? starColor : 'transparent',
-                  filter: isActive ? `drop-shadow(0 0 5px ${starColor})` : 'none'
-                }} 
-              />
-            );
-          })}
-        </div>
-        <span className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ color: currentTier.color || '#fff' }}>
-          {currentTier.label} {activeInTier}/{countInTier}
-        </span>
-      </div>
-    );
-  };
-
   return (
-    <div className="w-full h-screen bg-black text-white relative font-sans overflow-hidden">
-      {/* Background Graphic */}
-      <div className="absolute inset-0 z-0 opacity-40">
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-black z-10" />
-        <div className="absolute w-full h-full bg-[url('https://c4.wallpaperflare.com/wallpaper/500/442/354/outrun-vaporwave-hd-wallpaper-preview.jpg')] bg-cover bg-center mix-blend-overlay opacity-30 grayscale" />
+    <div className="w-full h-screen bg-[#050505] text-white relative font-sans overflow-hidden selection:bg-amber-500/30">
+      {/* Dynamic Background */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(245,158,11,0.05),transparent_70%)]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black" />
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
       </div>
 
-      <div className="absolute top-0 left-0 w-full p-8 z-20 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent">
-        <button onClick={() => navigate('/')} className="text-zinc-500 hover:text-white uppercase tracking-widest text-xs font-bold transition-colors flex items-center">
-          <ChevronLeft className="w-4 h-4 mr-2" /> Trở Về
+      {/* Top Header Navigation */}
+      <div className="absolute top-0 left-0 w-full p-6 z-30 flex justify-between items-center border-b border-white/5 bg-black/40 backdrop-blur-md">
+        <button onClick={() => navigate('/')} className="group flex items-center gap-3 text-zinc-500 hover:text-white transition-all">
+          <div className="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center group-hover:border-amber-500/50 group-hover:bg-amber-500/10">
+            <ChevronLeft className="w-4 h-4" />
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-[0.3em]">Hành Trình</span>
         </button>
 
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 bg-zinc-950/50 border border-white/10 px-4 py-2 rounded-lg">
-             <img src="/icon rpg/coin.png" className="w-4 h-4 object-contain" alt="Coin" />
-             <span className="text-sm font-black text-amber-500 tabular-nums">
-               {player?.coins?.toLocaleString() || 0}
-             </span>
-          </div>
-          <div className="flex items-center gap-2 bg-zinc-950/50 border border-white/10 px-4 py-2 rounded-lg">
-             <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center text-black text-[8px] font-black italic shadow-[0_0_10px_rgba(59,130,246,0.5)]">KC</div>
-             <span className="text-sm font-black text-blue-400 tabular-nums">
-               {player?.kc_balance?.toLocaleString() || 0}
-             </span>
-          </div>
+        <div className="flex items-center gap-4">
+          <ResourceBadge icon="/icon rpg/coin.png" value={player?.coins || 0} color="amber" />
+          <ResourceBadge label="KC" value={player?.kc_balance || 0} color="blue" />
         </div>
       </div>
 
-      <div className="flex h-full relative z-10 p-16 pb-8 pt-24 gap-12 max-w-7xl mx-auto">
-        {/* Left Column: List */}
-        <div className="w-64 flex flex-col gap-4 border-r border-white/10 pr-8 overflow-y-auto custom-scrollbar">
-          <h2 className="text-xs text-zinc-500 uppercase tracking-widest font-bold border-b border-white/5 pb-2">Danh sách</h2>
+      <div className="flex h-full relative z-10 pt-20">
+        {/* Left Sidebar: Character Roster */}
+        <div className="w-72 flex flex-col gap-2 border-r border-white/5 p-6 overflow-y-auto custom-scrollbar bg-black/20">
+          <div className="flex items-center gap-2 mb-4 px-2">
+            <div className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
+            <h2 className="text-[9px] text-zinc-500 uppercase font-black tracking-[0.4em]">Đội Hình Hiện Có</h2>
+          </div>
           {FULL_CHARACTERS.map(c => (
-            <button 
-              key={c.id} 
-              onClick={() => setSelectedCharId(c.id)}
-              className={`text-left text-sm uppercase tracking-wider py-3 border-l-2 transition-all ${selectedCharId === c.id ? 'border-amber-500 text-white pl-4' : 'border-transparent text-zinc-500 pl-2 hover:pl-4 hover:text-zinc-300'}`}
-            >
-              {c.name} {!c.isUnlocked && '(Chưa có)'}
-            </button>
+             <CharacterListItem 
+               key={c.id} 
+               char={c} 
+               isActive={selectedCharId === c.id} 
+               onClick={() => setSelectedCharId(c.id)} 
+             />
           ))}
         </div>
 
-        {/* Center: Visual & Equipment */}
-        <div className="flex-1 flex flex-col items-center relative">
-          <div className="absolute top-0 w-full flex justify-between items-start pointer-events-none">
-            {/* Left Header: Name & Realm */}
-            <div className="flex flex-col gap-2 pointer-events-auto">
-              <div className="flex items-center gap-3">
-                <h1 className="text-6xl font-black text-white uppercase tracking-tighter drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]">
-                  {activeChar.name}
-                </h1>
-                <div className="animate-pulse px-3 py-1 bg-amber-500/10 border border-amber-500/40 rounded-lg text-[10px] text-amber-500 font-black uppercase tracking-widest shadow-[0_0_15px_rgba(245,158,11,0.2)]">
-                  LEVEL {activeChar.level}
-                </div>
-              </div>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-500" />
-                  <span className={`text-sm font-black uppercase tracking-[0.3em] ${realmStage.color} drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]`}>
-                    {realmStage.label}
-                  </span>
-                </div>
-                <div className="text-3xl font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-600 drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)] mt-1">
-                  {realmTitle}
-                </div>
-              </div>
-            </div>
-
-            {/* Right Header: Combat Power Status Card */}
-            <div className="flex flex-col items-end gap-1 pointer-events-auto">
-              <div className="text-[10px] font-black uppercase tracking-[0.6em] text-zinc-500 mb-1 pr-4">Absolute Strength</div>
-              <div className="relative group">
-                <div className="absolute inset-x-[-30px] inset-y-[-10px] bg-amber-500/30 blur-[40px] opacity-100 group-hover:bg-amber-500/50 transition-all duration-1000" />
-                <div className="flex items-baseline gap-4 bg-black/60 border border-amber-500/20 px-10 py-3 rounded-2xl backdrop-blur-3xl relative z-10 shadow-2xl overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
-                  <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-amber-100 via-amber-400 to-amber-600 italic tracking-tighter filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-                    {cp.toLocaleString()}
-                  </span>
-                  <Sword className="w-6 h-6 text-amber-500 animate-[bounce_1.5s_infinite]" />
-                </div>
-              </div>
-              <div className="text-[9px] text-zinc-500 uppercase tracking-widest mt-2 bg-white/5 px-3 py-1 border border-white/5 rounded-full">
-                Hạng Đấu Trường: Top {{ 1: '1', 2: '12', 3: '45' }[player?.pvp_rank_level || 1] || '99+'}
-              </div>
-            </div>
-          </div>
-
-          <div className="w-[400px] h-[500px] mt-24 relative flex items-center justify-center pointer-events-none">
-            {activeChar.videoAvatar ? (
-              <img 
-                src={activeChar.videoAvatar} 
-                className="h-full object-cover mix-blend-screen opacity-90 filter contrast-125 rounded-3xl" 
-                alt={activeChar.name}
-              />
-            ) : (
-                <div className="text-zinc-700 text-6xl font-black uppercase blur-[2px]">{activeChar.name}</div>
-            )}
-          </div>
-
-          {/* Equipment Slots Around Character */}
-          <div className="absolute top-48 w-[600px] flex justify-between pointer-events-none">
-            {!activeChar.isUnlocked && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-auto">
-                <div className="bg-black/80 border border-white/10 px-6 py-3 text-center">
-                  <div className="text-2xl mb-1">🔒</div>
-                  <div className="text-xs text-zinc-400 uppercase tracking-widest">Chưa sở hữu</div>
-                </div>
-              </div>
-            )}
-            <div className={`flex flex-col gap-12 pointer-events-auto ${!activeChar.isUnlocked ? 'opacity-20 pointer-events-none' : ''}`}>
-              <EquipSlot label="Vũ khí" item={activeChar.equipment.artifact} slotType="artifact" onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'artifact' })} onUpgrade={setUpgradeTarget} />
-              <EquipSlot label="Phụ kiện" item={activeChar.equipment.ring} slotType="ring" onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'ring' })} onUpgrade={setUpgradeTarget} />
-              <EquipSlot label="Thắt Lưng" item={activeChar.equipment.belt} slotType="belt" onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'belt' })} onUpgrade={setUpgradeTarget} />
-            </div>
-            <div className={`flex flex-col gap-12 pointer-events-auto items-end ${!activeChar.isUnlocked ? 'opacity-20 pointer-events-none' : ''}`}>
-              <EquipSlot side="right" label="Mũ" item={activeChar.equipment.hat} slotType="hat" onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'hat' })} onUpgrade={setUpgradeTarget} />
-              <EquipSlot side="right" label="Áo Giáp" item={activeChar.equipment.armor} slotType="armor" onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'armor' })} onUpgrade={setUpgradeTarget} />
-              <EquipSlot side="right" label="Giày" item={activeChar.equipment.shoes} slotType="shoes" onClick={() => setShowEquipSelect({ charId: activeChar.id, slot: 'shoes' })} onUpgrade={setUpgradeTarget} />
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Stats & Upgrade */}
-        <div className="w-80 flex flex-col gap-8 ml-8 overflow-y-auto custom-scrollbar pr-2 h-full">
-          <div className="bg-zinc-950/50 backdrop-blur-md border border-white/10 p-6 flex flex-col gap-4">
-            {renderStars()}
-            
-            <div className="flex justify-between items-center border-t border-white/5 pt-4">
-               <div>
-                  <div className="text-[10px] text-zinc-500 uppercase tracking-widest">Cấp Độ</div>
-                  <div className="text-lg font-bold text-white">Lv. {activeChar.level} <span className="text-zinc-600 text-xs font-normal">/ {levelCap}</span></div>
-               </div>
-               <div className="text-right">
-                  <div className="text-[10px] text-zinc-500 uppercase tracking-widest">Mảnh</div>
-                  <div className="text-lg font-bold">
-                    <span className={activeChar.shards >= getRequiredShards(activeChar.stars) ? "text-green-400" : "text-amber-400"}>{activeChar.shards}</span>
-                    <span className="text-zinc-600 text-xs"> / {getRequiredShards(activeChar.stars)}</span>
-                  </div>
-               </div>
-            </div>
-
-            {/* Exp Bar */}
-            <div className="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden border border-white/5">
-               <div 
-                 className="h-full bg-gradient-to-r from-amber-600 to-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.6)] transition-all duration-700" 
-                 style={{ width: `${Math.min(100, (activeChar.exp / getRequiredExp(activeChar.level)) * 100)}%` }}
-               />
-            </div>
-            <div className="text-[8px] text-zinc-600 text-right font-mono tracking-tighter uppercase">
-               EXP {activeChar.exp.toLocaleString()} / {getRequiredExp(activeChar.level).toLocaleString()}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3">
-             {(() => {
-               const levelCost = Math.floor(Math.pow(activeChar.level, 1.2) * 800 + 500);
-               
-               // Calculate x10 cost and gain
-               const levelsToGainX10 = Math.min(10, levelCap - activeChar.level);
-               let totalCostX10 = 0;
-               for (let i = 0; i < levelsToGainX10; i++) {
-                 totalCostX10 += Math.floor(Math.pow(activeChar.level + i, 1.2) * 800 + 500);
-               }
-
-               return (
-                 <div className="flex flex-col gap-3">
-                   <button 
-                     disabled={activeChar.level >= levelCap || (player?.coins || 0) < levelCost || upgradeLevelMutation.isPending || !activeChar.isUnlocked}
-                     onClick={() => upgradeLevelMutation.mutate({ characterId: activeChar.id, newLevel: activeChar.level + 1, cost: levelCost })}
-                     className="w-full bg-amber-500 hover:bg-amber-400 text-black font-black uppercase tracking-widest py-4 text-sm transition-all disabled:opacity-20 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(245,158,11,0.3)] active:scale-95"
-                   >
-                     {upgradeLevelMutation.isPending ? 'Đang thăng cấp...' : `Thăng Cấp (${levelCost.toLocaleString()} Vàng)`}
-                   </button>
-                   
-                   {levelsToGainX10 > 1 && (
-                     <button 
-                       disabled={(player?.coins || 0) < totalCostX10 || upgradeLevelMutation.isPending || !activeChar.isUnlocked}
-                       onClick={() => upgradeLevelMutation.mutate({ characterId: activeChar.id, newLevel: activeChar.level + levelsToGainX10, cost: totalCostX10 })}
-                       className="w-full bg-zinc-950/50 border border-amber-500/20 hover:bg-amber-500/5 text-amber-500 font-bold uppercase tracking-[0.15em] py-3 text-[10px] transition-all disabled:opacity-20 disabled:cursor-not-allowed active:scale-95"
-                     >
-                       {upgradeLevelMutation.isPending ? '...' : `Thăng Cấp x${levelsToGainX10} (${totalCostX10.toLocaleString()} Vàng)`}
-                     </button>
-                   )}
-                 </div>
-               );
-             })()}
-
-             {activeChar.level >= levelCap && activeChar.realm_rank < REALM_DATA.length - 1 && (
-                <button 
-                  disabled={breakthroughMutation.isPending || !activeChar.isUnlocked}
-                  onClick={() => setShowBreakthroughModal(true)}
-                  className="w-full bg-purple-600 hover:bg-purple-500 text-white font-black uppercase tracking-widest py-4 text-sm transition-all shadow-[0_0_15px_rgba(168,85,247,0.4)] animate-pulse"
-                >
-                  Đột Phá Cảnh Giới
-                </button>
-             )}
-
-             <button 
-               disabled={activeChar.stars >= 6 || activeChar.shards < getRequiredShards(activeChar.stars) || upgradeStarMutation.isPending || !activeChar.isUnlocked}
-               onClick={handleUpgrade}
-               className="w-full bg-transparent border border-amber-500 hover:bg-amber-500/10 text-amber-500 font-bold uppercase tracking-widest py-4 text-sm transition-all disabled:opacity-20 disabled:cursor-not-allowed disabled:border-zinc-700 disabled:text-zinc-600 shadow-[0_0_15px_rgba(245,158,11,0.1)] active:scale-95"
-             >
-               Nâng Sao
-             </button>
-          </div>
+        {/* Main Content Area */}
+        <div className="flex-1 relative flex flex-col">
           
-          <button onClick={() => navigate('/abilities')} className="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold uppercase tracking-widest py-3 text-xs transition-colors">
-            Thông Tin Data
-          </button>
-
-          <div className="mt-4 px-3 py-3 bg-white/5 border border-white/10 relative group">
-            <div className="flex justify-between items-center mb-1 border-b border-white/5 pb-1">
-              <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest">Mô tả Đột phá</h3>
-              <div className="flex flex-col -space-y-1">
-                <ChevronUp className="w-3 h-3 text-amber-500/50" />
-                <ChevronDown className="w-3 h-3 text-amber-500/50" />
-              </div>
-            </div>
-            
-            <div className="relative">
-              {/* Custom Track Background for Visuals */}
-              <div className="absolute right-0 top-0 bottom-0 w-[10px] bg-black/40 rounded-full border-l border-white/5 pointer-events-none" />
-              
-              <div className="flex flex-col gap-2 max-h-[100px] overflow-y-auto custom-scrollbar pr-3 mt-2 scroll-smooth">
-                 {(STAR_BONUSES_MAP[activeChar.id] || []).length > 0 ? (
-                   <div className="text-xs text-zinc-300 space-y-1">
-                     {STAR_BONUSES_MAP[activeChar.id].map(b => (
-                       <div key={b.stars} className="flex gap-2">
-                         <span className={`font-bold min-w-[32px] inline-block ${activeChar.stars >= b.stars ? 'text-amber-400' : 'text-zinc-600'}`}>★{b.stars}</span>
-                         <span className={activeChar.stars >= b.stars ? 'text-zinc-200' : 'text-zinc-600'}>{b.desc}</span>
-                       </div>
-                     ))}
+          {/* BACKGROUND CHARACTER DISPLAY */}
+          <div className="flex-1 flex items-center justify-center relative pointer-events-none mb-12">
+             <div className="w-[600px] h-full relative flex items-center justify-center pt-10">
+                
+                {/* FLOATING STARS ABOVE HEAD - Precise Centering */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-auto animate-float z-30" style={{ animationDelay: '0.5s' }}>
+                   <div className="bg-zinc-950/40 backdrop-blur-md px-8 py-2 rounded-full border border-white/5 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+                      <StarDisplay tier={currentTier} stars={activeChar.stars} />
                    </div>
-                 ) : (
-                   <div className="text-xs text-zinc-500 italic">Nhân vật này chưa có mô tả đột phá.</div>
-                 )}
-              </div>
-            </div>
+                </div>
+
+                {/* Spirit Halo - Behind Character */}
+                <div className="absolute inset-0 flex items-center justify-center -z-10 overflow-hidden">
+                   <div className="w-[450px] h-[450px] bg-amber-500/5 blur-[120px] rounded-full animate-pulse" />
+                   <div className="absolute w-[300px] h-[300px] border border-amber-500/10 rounded-full animate-[spin_20s_linear_infinite]" />
+                </div>
+
+                <div className="relative h-full flex items-center justify-center">
+                   {/* Radial Mask to hide GIF square edges */}
+                   <div className="h-full relative flex items-center justify-center" style={{ maskImage: 'radial-gradient(circle, black 60%, transparent 95%)', WebkitMaskImage: 'radial-gradient(circle, black 60%, transparent 95%)' }}>
+                      {activeChar.videoAvatar ? (
+                        <img 
+                          src={activeChar.videoAvatar} 
+                          className="h-[95%] object-contain mix-blend-screen opacity-100 brightness-110 contrast-[1.1] saturate-[1.2] drop-shadow-[0_0_80px_rgba(245,158,11,0.2)] transition-all duration-1000 animate-float" 
+                          alt={activeChar.name}
+                        />
+                      ) : (
+                        <div className="text-zinc-900 text-9xl font-black uppercase blur-[1px] opacity-20">{activeChar.name}</div>
+                      )}
+                   </div>
+                </div>
+                
+                {/* Sacred Rune Circle - Multi-layered Base */}
+                <div className="absolute bottom-[2%] left-1/2 -translate-x-1/2 w-96 h-20 -z-10">
+                   <div className="absolute inset-0 bg-amber-500/10 blur-[50px] rounded-[50%] animate-pulse" />
+                   <div className="absolute inset-x-0 bottom-0 top-1/2 border border-amber-500/20 rounded-[50%] scale-110 opacity-30" />
+                   <div className="absolute inset-x-8 bottom-2 top-1/2 border border-amber-500/40 rounded-[50%] animate-[spin_10s_linear_infinite]" />
+                   <div className="absolute inset-x-12 bottom-4 top-1/2 border-2 border-dashed border-amber-500/20 rounded-[50%] animate-[spin_15s_linear_reverse_infinite]" />
+                </div>
+             </div>
+
+             {/* Equipment Slots Over Sprite */}
+             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-[800px] flex justify-between px-10">
+                   <div className="flex flex-col gap-16 pointer-events-auto">
+                      <EquipSlot label="LINH KHÍ" item={activeChar.equipment.artifact} slot="artifact" onSelect={setShowEquipSelect} onUpgrade={setUpgradeTarget} activeCharId={activeChar.id} />
+                      <EquipSlot label="NHẪN THẦN" item={activeChar.equipment.ring} slot="ring" onSelect={setShowEquipSelect} onUpgrade={setUpgradeTarget} activeCharId={activeChar.id} />
+                      <EquipSlot label="ĐAI LỖ" item={activeChar.equipment.belt} slot="belt" onSelect={setShowEquipSelect} onUpgrade={setUpgradeTarget} activeCharId={activeChar.id} />
+                   </div>
+                   <div className="flex flex-col gap-16 pointer-events-auto items-end">
+                      <EquipSlot side="right" label="MŨ BẢO" item={activeChar.equipment.hat} slot="hat" onSelect={setShowEquipSelect} onUpgrade={setUpgradeTarget} activeCharId={activeChar.id} />
+                      <EquipSlot side="right" label="GIÁP THÂN" item={activeChar.equipment.armor} slot="armor" onSelect={setShowEquipSelect} onUpgrade={setUpgradeTarget} activeCharId={activeChar.id} />
+                      <EquipSlot side="right" label="GIÀY THẦN" item={activeChar.equipment.shoes} slot="shoes" onSelect={setShowEquipSelect} onUpgrade={setUpgradeTarget} activeCharId={activeChar.id} />
+                   </div>
+                </div>
+             </div>
           </div>
 
-          <div className="flex flex-col gap-3 mt-4">
-            <h3 className="text-xs text-zinc-500 uppercase tracking-widest border-b border-white/5 pb-2 mb-2">Thông Số Cốt Lõi</h3>
-            <StatRow label="Máu" val={totalStats.hp} base={activeChar.baseStats.hp} />
-            <StatRow label="Tốc Độ" val={totalStats.speed} base={activeChar.baseStats.speed} />
-            <StatRow label="Phòng Ngự" val={totalStats.armor} base={activeChar.baseStats.armor} />
-            <StatRow label="Sát Thương" val={totalStats.dmg} base={activeChar.baseStats.dmg} />
+          {/* BOTTOM HUD ZONE: Realm & CP */}
+          <div className="p-12 pt-0 flex justify-between items-end relative z-20 pointer-events-none">
+             {/* Realm Panel */}
+             <div className="bg-zinc-950/80 backdrop-blur-2xl border border-white/5 p-6 rounded-[32px] pointer-events-auto shadow-2xl relative overflow-hidden group min-w-[300px]">
+                <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-amber-400 to-amber-800" />
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/30">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                  </div>
+                  <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.4em]">Đạo Pháp Cảnh Giới</span>
+                </div>
+                <div className={`text-xs font-black uppercase tracking-[0.2em] mb-1 ${realmStage.color}`}>{realmStage.label}</div>
+                <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-amber-200 to-amber-600 uppercase tracking-widest">{realmTitle}</div>
+                
+                {activeChar.level >= levelCap && activeChar.realm_rank < REALM_DATA.length - 1 && (
+                  <button 
+                    onClick={() => setShowBreakthroughModal(true)}
+                    className="mt-6 w-full py-3 bg-amber-500 hover:bg-amber-400 text-black font-black uppercase text-[10px] tracking-[0.3em] rounded-xl transition-all animate-pulse active:scale-95 shadow-[0_0_20px_rgba(245,158,11,0.3)]"
+                  >
+                    PHÁ QUYẾT ĐẦU CƠ
+                  </button>
+                )}
+             </div>
+
+             {/* Combat Power Core */}
+             <div className="flex flex-col items-center pointer-events-auto">
+                <div className="relative">
+                   {/* Decorative Aura */}
+                   <div className="absolute inset-[-40px] bg-amber-500/10 blur-[50px] rounded-full animate-pulse" />
+                   
+                   <div className="relative z-10 bg-zinc-950/90 border-2 border-amber-500/30 px-12 py-4 rounded-[40px] backdrop-blur-3xl shadow-[0_20px_80px_rgba(0,0,0,0.8)] flex flex-col items-center min-w-[340px]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-[1px] bg-gradient-to-r from-transparent to-amber-500/50" />
+                        <span className="text-[9px] font-black text-amber-500/80 uppercase tracking-[0.8em]">Tổng Lực Chiến</span>
+                        <div className="w-8 h-[1px] bg-gradient-to-l from-transparent to-amber-500/50" />
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <Sword className="w-8 h-8 text-amber-500/50 animate-[bounce_2s_infinite]" />
+                        <span className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white via-amber-200 to-amber-600 tabular-nums italic tracking-tighter filter drop-shadow-[0_4px_10px_rgba(0,0,0,1)]">
+                          {cp.toLocaleString()}
+                        </span>
+                        <Zap className="w-8 h-8 text-amber-500/50 animate-pulse" />
+                      </div>
+                   </div>
+                   <div className="mt-4 w-48 h-1.5 bg-amber-500/20 blur-sm rounded-full mx-auto" />
+                </div>
+             </div>
           </div>
+        </div>
+
+        {/* Right Sidebar: Attributes & Upgrades */}
+        <div className="w-[360px] flex flex-col gap-6 p-8 overflow-y-auto custom-scrollbar bg-black/40 border-l border-white/5">
+           {/* Level & Shard Progress */}
+           <div className="bg-zinc-900/40 border border-white/5 p-6 rounded-3xl flex flex-col gap-6 relative overflow-hidden">
+              <div className="flex justify-between items-end">
+                 <div>
+                    <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest block mb-1">Cấp Độ Tu Luyện</span>
+                    <div className="text-2xl font-black italic">Lv. {activeChar.level} <span className="text-zinc-600 text-xs font-normal">/ {levelCap}</span></div>
+                 </div>
+                 <div className="text-right">
+                    <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest block mb-1">Nguyên Thần</span>
+                    <div className="text-2xl font-black text-amber-500">
+                      {activeChar.shards} <span className="text-zinc-600 text-xs font-normal">/ {getRequiredShards(activeChar.stars)}</span>
+                    </div>
+                 </div>
+              </div>
+
+              {/* EXP Progress */}
+              <div className="space-y-1.5">
+                 <div className="flex justify-between text-[8px] font-black tracking-widest uppercase text-zinc-500">
+                    <span>Exp Tiến Trình</span>
+                    <span>{Math.round((activeChar.exp / getRequiredExp(activeChar.level)) * 100)}%</span>
+                 </div>
+                 <div className="w-full h-1.5 bg-black rounded-full overflow-hidden border border-white/5">
+                    <div className="h-full bg-gradient-to-r from-amber-600 to-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.5)] transition-all duration-1000" style={{ width: `${Math.min(100, (activeChar.exp / getRequiredExp(activeChar.level)) * 100)}%` }} />
+                 </div>
+              </div>
+           </div>
+
+           {/* Core Growth Buttons */}
+           <div className="flex flex-col gap-3">
+              {(() => {
+                const levelCost = Math.floor(Math.pow(activeChar.level, 1.2) * 800 + 500);
+                const lvX10 = Math.min(10, levelCap - activeChar.level);
+                let totalX10 = 0;
+                for (let i = 0; i < lvX10; i++) totalX10 += Math.floor(Math.pow(activeChar.level + i, 1.2) * 800 + 500);
+                
+                return (
+                  <div className="space-y-3">
+                    <button 
+                      disabled={activeChar.level >= levelCap || (player?.coins || 0) < levelCost || upgradeLevelMutation.isPending || !activeChar.isUnlocked}
+                      onClick={() => upgradeLevelMutation.mutate({ characterId: activeChar.id, newLevel: activeChar.level + 1, cost: levelCost })}
+                      className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-20 text-black font-black uppercase tracking-widest py-5 rounded-2xl transition-all shadow-xl active:scale-[0.98]"
+                    >
+                      {upgradeLevelMutation.isPending ? 'NÂNG CẤP...' : `Thăng Cấp (${levelCost.toLocaleString()})`}
+                    </button>
+                    {lvX10 > 1 && (
+                       <button 
+                         disabled={(player?.coins || 0) < totalX10 || upgradeLevelMutation.isPending || !activeChar.isUnlocked}
+                         onClick={() => upgradeLevelMutation.mutate({ characterId: activeChar.id, newLevel: activeChar.level + lvX10, cost: totalX10 })}
+                         className="w-full bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-10 text-white font-black uppercase tracking-widest py-3 text-[10px] rounded-xl transition-all"
+                       >
+                         Thăng Cấp x{lvX10} ({totalX10.toLocaleString()})
+                       </button>
+                    )}
+                  </div>
+                );
+              })()}
+
+              <button 
+                disabled={activeChar.stars >= 46 || activeChar.shards < getRequiredShards(activeChar.stars) || upgradeStarMutation.isPending || !activeChar.isUnlocked}
+                onClick={handleUpgrade}
+                className="w-full border-2 border-amber-500/50 hover:bg-amber-500/10 disabled:opacity-20 text-amber-500 font-black uppercase tracking-widest py-5 rounded-2xl transition-all"
+              >
+                Nâng Sao / Bậc Sẹo
+              </button>
+           </div>
+
+           {/* Stats Overview */}
+           <div className="flex-1">
+              <div className="flex items-center gap-2 mb-4">
+                 <div className="w-1 h-4 bg-amber-500" />
+                 <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Thông Số Cốt Lõi</h3>
+              </div>
+              <div className="space-y-4">
+                 <ModernStat icon={<img src="/icon rpg/damage.png" className="w-5 h-5 object-contain" alt="Atk" />} label="Sát Thương" val={totalStats.dmg} base={activeChar.baseStats.dmg} />
+                 <ModernStat icon={<img src="/icon rpg/shield.png" className="w-5 h-5 object-contain" alt="Def" />} label="Phòng Ngự" val={totalStats.armor} base={activeChar.baseStats.armor} />
+                 <ModernStat icon={<img src="/icon rpg/hearts.png" className="w-5 h-5 object-contain" alt="HP" />} label="Sinh Mệnh" val={totalStats.hp} base={activeChar.baseStats.hp} />
+                 <ModernStat icon={<img src="/icon rpg/speed.png" className="w-5 h-5 object-contain" alt="Spd" />} label="Tốc Độ" val={totalStats.speed} base={activeChar.baseStats.speed} />
+              </div>
+
+              {/* Star Bonuses Display */}
+              <div className="mt-8">
+                 <div className="text-[8px] font-black text-zinc-600 uppercase tracking-widest border-b border-white/5 pb-2 mb-3">Mô Tả Đột Phá Bậc Sẹo</div>
+                 <div className="max-h-40 overflow-y-auto custom-scrollbar pr-2 space-y-2">
+                    {(STAR_BONUSES_MAP[activeChar.id] || []).map(b => (
+                       <div key={b.stars} className={`flex gap-3 text-[10px] transition-all ${activeChar.stars >= b.stars ? 'text-zinc-200' : 'text-zinc-700'}`}>
+                          <span className={`font-black min-w-[32px] ${activeChar.stars >= b.stars ? 'text-amber-500' : ''}`}>★{b.stars}</span>
+                          <span>{b.desc}</span>
+                       </div>
+                    ))}
+                 </div>
+              </div>
+           </div>
         </div>
       </div>
 
-      {/* Equipment Selector Dialog */}
-      {showEquipSelect && (() => {
-        const getItemPower = (eq: any) => {
-          if (!eq || !eq.stats) return 0;
-          return (eq.stats.hp || 0) * 0.4 + 
-                 (eq.stats.dmg || 0) * 10 + 
-                 (eq.stats.armor || 0) * 2 + 
-                 (eq.stats.speed || 0) * 25 + 
-                 (eq.level || 0) * 100;
-        };
-
-        const filteredInventory = (inventory || [])
-          .filter((eq: any) => 
-            eq.type === showEquipSelect.slot && 
-            !FULL_CHARACTERS.some((c: any) => 
-              c.isUnlocked && 
-              c.id !== showEquipSelect.charId && 
-              Object.values(c.equipment).some((e: any) => e?.id === eq.id)
-            )
-          )
-          .sort((a: any, b: any) => getItemPower(b) - getItemPower(a));
-
-        const getRarityClass = (rarity: string) => {
-          switch (rarity) {
-            case 'rainbow': return 'border-indigo-400 bg-indigo-950/20 shadow-[0_0_15px_rgba(99,102,241,0.2)] text-indigo-400';
-            case 'black':   return 'border-zinc-500 bg-zinc-900/20 text-zinc-300';
-            case 'red':     return 'border-red-500 bg-red-950/20 text-red-500';
-            case 'orange':  return 'border-amber-500 bg-amber-950/20 text-amber-500';
-            case 'purple':  return 'border-purple-500 bg-purple-950/20 text-purple-500';
-            case 'blue':    return 'border-blue-500 bg-blue-950/20 text-blue-500';
-            case 'green':   return 'border-emerald-500 bg-emerald-950/20 text-emerald-500';
-            default:        return 'border-white/10 bg-zinc-950/50 text-zinc-400';
-          }
-        };
-
-        return (
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-50 animate-in fade-in gap-6">
-            <div className="w-[600px] h-[85vh] max-h-[700px] bg-zinc-950 border border-white/10 p-8 shadow-2xl flex flex-col">
-              <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-4">
-                <h3 className="text-xl font-bold uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-zinc-200 to-zinc-500">KHO LƯU TRỮ VẬT PHẨM</h3>
-                <button className="text-zinc-500 hover:text-white uppercase tracking-widest text-xs" onClick={() => setShowEquipSelect(null)}>ĐÓNG</button>
-              </div>
-              <div className="grid grid-cols-2 gap-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                {filteredInventory.length === 0 && (
-                  <div className="col-span-2 text-center py-12 text-zinc-600 tracking-widest uppercase text-sm">
-                    Không tìm thấy vật phẩm tương thích ({showEquipSelect.slot})
-                  </div>
-                )}
-                {filteredInventory.map((eq: any) => {
-                  const isEquippedByMe = (activeChar.equipment as any)[eq.type]?.id === eq.id;
-                  const rarityClass = getRarityClass(eq.rarity);
-                  const itemPower = getItemPower(eq);
-
-                  return (
-                    <button 
-                      key={eq.id} 
-                      onClick={() => handleEquip(eq.id)} 
-                      className={`text-left p-4 transition-all hover:scale-[1.02] active:scale-95 border-2 ${isEquippedByMe ? 'border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.3)]' : rarityClass}`}
-                    >
-                      <div className="flex items-center gap-3 mb-2">
-                        <EquipmentIcon type={eq.type} level={eq.level || 0} rarity={eq.rarity} size="sm" />
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-xs font-black uppercase truncate">{eq.name}</span>
-                          <span className="text-[9px] opacity-70 tracking-tighter uppercase font-bold">Lực chiến: {itemPower.toLocaleString()}</span>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-y-1 text-[10px] opacity-80">
-                        {eq.stats?.hp > 0 && <span className="text-green-400">HP: +{eq.stats.hp}</span>}
-                        {eq.stats?.dmg > 0 && <span className="text-red-400">DMG: +{eq.stats.dmg}</span>}
-                        {eq.stats?.armor > 0 && <span className="text-blue-400">ARM: +{eq.stats.armor}</span>}
-                        {eq.level > 0 && <span className="text-amber-500 col-span-2 font-black">CƯỜNG HÓA: +{eq.level}</span>}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-              <button onClick={() => handleEquip(null)} className="w-full mt-6 py-4 block bg-red-950/30 text-red-500 uppercase tracking-widest text-xs font-bold border border-red-500/20 hover:bg-red-500/20 transition-colors">Gỡ bỏ trang bị</button>
-            </div>
-             <div className="w-[500px] h-[85vh] max-h-[700px]">
-              {activeChar.equipment[showEquipSelect.slot as keyof typeof activeChar.equipment] ? (
-                <EquipmentUpgradeModal inline equipment={activeChar.equipment[showEquipSelect.slot as keyof typeof activeChar.equipment] as Equipment} />
-              ) : (
-                <div className="w-full h-full bg-zinc-950 border border-white/10 flex items-center justify-center text-zinc-600 font-bold uppercase tracking-widest text-sm text-center px-8">Hãy trang bị vật phẩm<br/>để có thể cường hóa</div>
-              )}
-            </div>
-          </div>
-        );
-      })()}
+      {/* Overlays */}
+      {showEquipSelect && <EquipSelectDialog activeChar={activeChar} FULL_CHARACTERS={FULL_CHARACTERS} item={showEquipSelect} onSelect={handleEquip} onClose={() => setShowEquipSelect(null)} inventory={inventory} />}
       {upgradeTarget && <EquipmentUpgradeModal equipment={upgradeTarget} onClose={() => setUpgradeTarget(null)} />}
-      
-      {showBreakthroughModal && (() => {
-        const nextRealm = REALM_DATA[activeChar.realm_rank + 1];
-        if (!nextRealm) return null;
-        
-        const stoneInInv = materials?.find((m: any) => m.material_id === 'magic_stone')?.amount || 0;
-        const hasStone = stoneInInv >= nextRealm.costStone;
-        const hasKC = (player?.kc_balance || 0) >= nextRealm.costKC;
-        const canBreakthrough = hasStone && hasKC;
-
-        return (
-          <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl flex items-center justify-center z-[60] animate-in zoom-in duration-300">
-            <div className="w-[500px] bg-zinc-950 border border-purple-500/30 p-8 shadow-[0_0_50px_rgba(168,85,247,0.2)] flex flex-col items-center">
-              <div className="w-20 h-20 bg-purple-900/30 rounded-full flex items-center justify-center mb-6 border border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.3)]">
-                <Sparkles className="w-10 h-10 text-purple-400 animate-pulse" />
-              </div>
-              
-              <h3 className="text-2xl font-black text-white uppercase tracking-widest mb-1">ĐỘT PHÁ CẢNH GIỚI</h3>
-              <p className="text-zinc-500 text-[10px] uppercase tracking-widest mb-8">Hành trình từ {realmTitle} tới {nextRealm.name}</p>
-
-              <div className="w-full grid grid-cols-2 gap-4 mb-8">
-                <div className={`p-4 border bg-zinc-900/50 flex flex-col items-center gap-2 ${hasStone ? 'border-zinc-800' : 'border-red-900/50'}`}>
-                  <img src="/icon rpg/magic_stone.png" className="w-8 h-8 object-contain" alt="Stone" />
-                  <div className="text-[10px] text-zinc-500 uppercase font-bold text-center">Đá Đột Phá</div>
-                  <div className={`text-lg font-black ${hasStone ? 'text-white' : 'text-red-500'}`}>{stoneInInv} / {nextRealm.costStone}</div>
-                </div>
-                <div className={`p-4 border bg-zinc-900/50 flex flex-col items-center gap-2 ${hasKC ? 'border-zinc-800' : 'border-red-900/50'}`}>
-                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-black text-[10px] font-black italic shadow-[0_0_10px_rgba(59,130,246,0.5)]">KC</div>
-                  <div className="text-[10px] text-zinc-500 uppercase font-bold text-center">Kim Cương</div>
-                  <div className={`text-lg font-black ${hasKC ? 'text-white' : 'text-red-500'}`}>{(player?.kc_balance || 0).toLocaleString()} / {nextRealm.costKC.toLocaleString()}</div>
-                </div>
-              </div>
-
-              <div className="w-full bg-zinc-900/80 border border-white/5 p-4 mb-8">
-                 <div className="flex justify-between items-center mb-2">
-                   <span className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">Tỷ lệ thành công</span>
-                   <span className="text-amber-500 font-black text-xl">{Math.round(nextRealm.successRate * 100)}%</span>
-                 </div>
-                 <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
-                   <div 
-                     className="h-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)] transition-all" 
-                     style={{ width: `${nextRealm.successRate * 100}%` }}
-                   />
-                 </div>
-              </div>
-
-              <div className="flex gap-4 w-full">
-                <button 
-                  onClick={() => setShowBreakthroughModal(false)}
-                  className="flex-1 border border-white/10 hover:bg-white/5 text-zinc-500 hover:text-white py-4 uppercase font-bold tracking-widest text-[10px] transition-all"
-                >
-                  Hủy Bỏ
-                </button>
-                <button 
-                  disabled={!canBreakthrough || breakthroughMutation.isPending}
-                  onClick={() => {
-                    const roll = Math.random();
-                    const success = roll <= nextRealm.successRate;
-                    breakthroughMutation.mutate({
-                      characterId: activeChar.id,
-                      costStone: nextRealm.costStone,
-                      costKC: nextRealm.costKC,
-                      success
-                    }, {
-                      onSuccess: () => {
-                        if (success) {
-                          toast.success(`ĐỘT PHÁ THÀNH CÔNG! Chúc mừng bạn đã bước vào ${nextRealm.name}!`, {
-                            duration: 5000,
-                            style: { background: '#10b981', color: '#fff', border: '1px solid #059669' }
-                          });
-                          setShowBreakthroughModal(false);
-                        } else {
-                          toast.error(`ĐỘT PHÁ THẤT BẠI! Tâm ma đã xâm chiếm, tài nguyên đã tiêu hao sạch sẽ...`, {
-                            duration: 5000,
-                            style: { background: '#ef4444', color: '#fff', border: '1px solid #dc2626' }
-                          });
-                        }
-                      }
-                    });
-                  }}
-                  className="flex-[2] bg-purple-600 hover:bg-purple-500 text-white px-8 py-4 uppercase font-black tracking-widest text-xs transition-all disabled:opacity-20 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(168,85,247,0.3)] active:scale-95"
-                >
-                  {breakthroughMutation.isPending ? 'Đang Đột Phá...' : 'Tiến Hành Đột Phá'}
-                </button>
-              </div>
-              
-              {breakthroughMutation.isError && (
-                <p className="text-red-500 text-[10px] mt-4 uppercase font-bold">Lỗi hệ thống! Hãy thử lại.</p>
-              )}
-            </div>
-          </div>
-        );
-      })()}
+      {showBreakthroughModal && <BreakthroughModal activeChar={activeChar} player={player} materials={materials} onClose={() => setShowBreakthroughModal(false)} mutation={breakthroughMutation} realmTitle={realmTitle} />}
     </div>
   );
 }
 
-function StatRow({ label, val, base }: { label: string, val: number, base: number }) {
-  const bonus = val - Math.floor(base); // handle level mult floor
+// Sub-components for cleaner codebase
+
+function CharacterListItem({ char, isActive, onClick }: any) {
   return (
-    <div className="flex justify-between items-end border-b border-white/5 pb-1">
-      <span className="text-zinc-400 text-sm">{label}</span>
-      <div className="text-right">
-        <span className="text-lg font-bold">{val.toLocaleString()}</span>
-        {bonus > 0 && <span className="text-green-500 text-xs ml-2">+{bonus.toLocaleString()}</span>}
+    <button 
+      onClick={onClick}
+      className={`group w-full text-left p-3 rounded-2xl transition-all border-2 relative overflow-hidden ${isActive ? 'bg-amber-500 border-amber-500 shadow-lg shadow-amber-500/20' : 'bg-white/5 border-transparent hover:border-white/10 hover:bg-white/10'}`}
+    >
+      <div className="flex flex-col gap-1 relative z-10">
+        <span className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-black/60' : 'text-zinc-500'}`}>{char.id}</span>
+        <span className={`text-sm font-black uppercase tracking-tight ${isActive ? 'text-black' : 'text-zinc-200'}`}>{char.name}</span>
       </div>
+      {!char.isUnlocked && (
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center">
+          <span className="text-[8px] font-black uppercase tracking-wider text-white/40">CHƯA SỞ HỮU</span>
+        </div>
+      )}
+    </button>
+  );
+}
+
+function ResourceBadge({ icon, label, value, color }: any) {
+  return (
+    <div className="bg-zinc-950/80 border border-white/5 px-4 py-2 rounded-xl flex items-center gap-3 shadow-xl">
+       {icon ? <img src={icon} className="w-4 h-4 object-contain" alt="Icon" /> : <div className={`w-4 h-4 rounded-full flex items-center justify-center text-black text-[7px] font-black bg-${color}-500 shadow-[0_0_10px_rgba(var(--${color}),0.5)]`}>{label}</div>}
+       <span className={`text-sm font-black tabular-nums ${color === 'amber' ? 'text-amber-500' : 'text-blue-400'}`}>{value.toLocaleString()}</span>
     </div>
   );
 }
 
-function EquipSlot({ label, item, slotType, onClick, onUpgrade, side = 'left' }: { label: string, item: any, slotType: string, onClick: () => void, onUpgrade: (eq: Equipment) => void, side?: 'left' | 'right' }) {
+function StarDisplay({ tier, stars }: any) {
+  const [min, max] = tier.range;
+  const countInTier = max - min + 1;
+  const activeInTier = stars - min + 1;
+
   return (
-    <div className={`flex gap-4 items-center group ${side === 'right' ? 'flex-row-reverse text-right' : 'text-left'}`}>
-      <button onClick={onClick} className={`w-20 h-20 border-2 flex items-center justify-center transition-all relative overflow-hidden shrink-0 ${
-        item 
-         ? (item.rarity === 'rainbow' ? 'border-indigo-400 bg-indigo-950/50 shadow-[0_0_15px_rgba(99,102,241,0.3)]' :
-            item.rarity === 'black'   ? 'border-zinc-500 bg-zinc-950 shadow-[0_0_15px_rgba(255,255,255,0.1)]' : 
-            item.rarity === 'red'     ? 'border-red-500 bg-red-900/40' : 
-            item.rarity === 'orange'  ? 'border-amber-500 bg-amber-900/40' : 
-            item.rarity === 'purple'  ? 'border-purple-500 bg-purple-900/40' :
-            item.rarity === 'blue'    ? 'border-blue-500 bg-blue-900/40' :
-                                        'border-zinc-400 bg-zinc-900/40') // White / Default
-         : 'border-white/10 bg-black hover:border-white/30'
-      }`}>
-        <EquipmentIcon type={item?.type || slotType} level={item?.level || 0} rarity={item?.rarity} size="md" className={item ? "" : "opacity-20 grayscale"} />
-        {item && item.level > 0 && (
-          <div className="absolute top-0 right-0 bg-amber-500 text-black text-[9px] px-1 font-black rounded-sm z-30">
-            +{item.level}
-          </div>
-        )}
+    <div className="flex flex-col items-center gap-2">
+      <div className="flex gap-1.5">
+        {Array.from({ length: countInTier }).map((_, i) => {
+          const isActive = i < activeInTier;
+          let color = tier.color || '#fff';
+          if (tier.colors) color = tier.colors[i % tier.colors.length];
+          return (
+            <Star key={i} className="w-5 h-5 transition-all duration-700" style={{ color: isActive ? color : '#1f2937', fill: isActive ? color : 'transparent', filter: isActive ? `drop-shadow(0 0 8px ${color})` : 'none'}} />
+          );
+        })}
+      </div>
+      <span className="text-[9px] font-black tracking-[0.4em] uppercase" style={{ color: tier.color || '#fff' }}>[{tier.label}] {activeInTier}/{countInTier}</span>
+    </div>
+  );
+}
+
+function ModernStat({ icon, label, val, base }: any) {
+  const bonus = val - Math.floor(base);
+  return (
+    <div className="flex justify-between items-center group">
+       <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">{icon}</div>
+          <span className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">{label}</span>
+       </div>
+       <div className="text-right">
+          <span className="text-lg font-black italic">{val.toLocaleString()}</span>
+          {bonus > 0 && <span className="text-[10px] text-green-500 ml-2 font-black">+{bonus.toLocaleString()}</span>}
+       </div>
+    </div>
+  );
+}
+
+function EquipSlot({ label, item, slot, onSelect, onUpgrade, side = 'left', activeCharId, className }: any) {
+  const getRarityClass = (rarity: string) => {
+    switch (rarity) {
+      case 'rainbow': return 'border-indigo-400 bg-indigo-950/20 shadow-indigo-500/30';
+      case 'red':     return 'border-red-500 bg-red-950/20';
+      case 'orange':  return 'border-amber-500 bg-amber-950/20';
+      case 'purple':  return 'border-purple-500 bg-purple-950/20';
+      case 'blue':    return 'border-blue-500 bg-blue-950/20';
+      case 'green':   return 'border-emerald-500 bg-emerald-950/20';
+      default:        return 'border-white/5 bg-black/40 hover:border-white/20';
+    }
+  };
+
+  const rClass = item ? getRarityClass(item.rarity) : 'border-white/5 bg-black/40 hover:border-white/20';
+
+  return (
+    <div className={`flex gap-4 items-center group ${side === 'right' ? 'flex-row-reverse text-right' : 'text-left'} ${className || ""}`}>
+      <button 
+        onClick={() => onSelect({ charId: activeCharId, slot })}
+        className={`w-20 h-20 rounded-2xl border-2 flex items-center justify-center transition-all relative overflow-hidden shadow-2xl ${rClass}`}
+      >
+        <EquipmentIcon type={item?.type || slot} level={item?.level || 0} rarity={item?.rarity} size="md" className={item ? "" : "opacity-10 grayscale"} />
+        {item && item.level > 0 && <div className="absolute top-1 right-1 bg-amber-500 text-black text-[10px] px-1 font-black rounded-sm shadow-md">+{item.level}</div>}
       </button>
       <div className="flex-1 min-w-0">
-        <div className="text-[10px] text-zinc-500 tracking-widest uppercase mb-1">{label}</div>
-        <div className={`flex items-center gap-2 ${side === 'right' ? 'justify-end' : 'justify-start'}`}>
-          <button onClick={onClick} className="text-sm font-bold truncate max-w-[120px] hover:text-amber-400 transition-colors uppercase">
-            {item ? item.name : 'Trống'}
-          </button>
+        <div className="text-[8px] text-zinc-600 uppercase font-black tracking-widest mb-1">{label}</div>
+        <button onClick={() => onSelect({ charId: activeCharId, slot })} className="text-xs font-black truncate max-w-[120px] hover:text-amber-500 transition-colors uppercase italic block">{item ? item.name : 'VÔ CHỦ'}</button>
+        {item && (
+          <button onClick={() => onUpgrade(item)} className="mt-2 text-amber-500/50 hover:text-amber-500 transition-colors"><ArrowUpCircle className="w-4 h-4" /></button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BreakthroughModal({ activeChar, player, materials, onClose, mutation, realmTitle }: any) {
+  const nextRealm = REALM_DATA[activeChar.realm_rank + 1];
+  if (!nextRealm) return null;
+  const stoneInInv = materials?.find((m: any) => m.material_id === 'magic_stone')?.amount || 0;
+  const hasStone = stoneInInv >= nextRealm.costStone;
+  const hasKC = (player?.kc_balance || 0) >= nextRealm.costKC;
+
+  return (
+    <div className="absolute inset-0 bg-black/95 backdrop-blur-3xl flex items-center justify-center z-[110] animate-in fade-in duration-500">
+      <div className="w-[500px] bg-zinc-950 border border-amber-500/20 p-10 rounded-[40px] text-center shadow-[0_0_100px_rgba(245,158,11,0.1)] relative overflow-hidden">
+        <Sparkles className="w-16 h-16 text-amber-400 mx-auto mb-6 animate-pulse" />
+        <h3 className="text-3xl font-black text-white uppercase mb-2 tracking-tighter">PHÁ GIỚI TIÊN MA</h3>
+        <p className="text-zinc-500 text-[10px] uppercase tracking-widest mb-12">Từ {realmTitle} tới {nextRealm.name}</p>
+        
+        <div className="grid grid-cols-2 gap-4 mb-10">
+           <ResourceReq label="ĐÁ ĐỘT PHÁ" icon="/icon rpg/magic_stone.png" current={stoneInInv} req={nextRealm.costStone} has={hasStone} />
+           <ResourceReq label="KIM CƯƠNG" current={player?.kc_balance || 0} req={nextRealm.costKC} has={hasKC} isKC />
+        </div>
+
+        <div className="flex gap-4">
+           <button onClick={onClose} className="flex-1 py-4 border border-white/10 rounded-2xl text-zinc-500 hover:text-white transition-all uppercase font-black text-[10px]">Lùi Bước</button>
+           <button 
+             disabled={!hasStone || !hasKC || mutation.isPending}
+             onClick={() => {
+                const success = Math.random() <= nextRealm.successRate;
+                mutation.mutate({ characterId: activeChar.id, costStone: nextRealm.costStone, costKC: nextRealm.costKC, success }, {
+                   onSuccess: () => {
+                      if (success) { toast.success(`ĐỘT PHÁ THÀNH CÔNG! Chào mừng ${nextRealm.name}!`); onClose(); }
+                      else { toast.error("THẤT BẠI! Tâm ma xâm chiếm, tiêu hao tài nguyên."); }
+                   }
+                });
+             }}
+             className="flex-[2] py-4 bg-amber-500 text-black rounded-2xl uppercase font-black text-[10px] hover:bg-amber-400 transition-all shadow-xl shadow-amber-500/20 active:scale-95"
+           >
+             {mutation.isPending ? 'ĐANG PHÁ GIỚI...' : 'TIẾN HÀNH ĐỘT PHÁ'}
+           </button>
         </div>
       </div>
-      {item && (
+    </div>
+  );
+}
+
+function ResourceReq({ label, icon, current, req, has, isKC }: any) {
+  return (
+    <div className={`p-4 rounded-2xl bg-white/5 border ${has ? 'border-white/10' : 'border-red-900/50'} flex flex-col items-center gap-2`}>
+       {icon ? <img src={icon} className="w-6 h-6 object-contain" alt="Req" /> : <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-black text-[6px] font-black italic">KC</div>}
+       <span className="text-[8px] text-zinc-600 font-black uppercase text-center mt-1">{label}</span>
+       <div className={`text-sm font-black ${has ? 'text-white' : 'text-red-500'}`}>{current.toLocaleString()} / {req.toLocaleString()}</div>
+    </div>
+  );
+}
+
+function EquipSelectDialog({ activeChar, FULL_CHARACTERS, item: select, onSelect, onClose, inventory }: any) {
+  const getItemPower = (eq: any) => {
+    if (!eq || !eq.stats) return 0;
+    return (eq.stats.hp || 0) * 0.4 + (eq.stats.dmg || 0) * 10 + (eq.stats.armor || 0) * 2 + (eq.stats.speed || 0) * 25 + (eq.level || 0) * 100;
+  };
+
+  const matchingItems = (inventory || [])
+    .filter((eq: any) => eq.type === select.slot && !FULL_CHARACTERS.some((c: any) => c.isUnlocked && c.id !== select.charId && Object.values(c.equipment).some((e: any) => e?.id === eq.id)))
+    .sort((a: any, b: any) => getItemPower(b) - getItemPower(a));
+
+  const getRarityClass = (rarity: string) => {
+    switch (rarity) {
+      case 'rainbow': return 'border-indigo-400 bg-indigo-950/40 shadow-[inset_0_0_20px_rgba(129,140,248,0.2)] text-indigo-400';
+      case 'red':     return 'border-red-500 bg-red-950/40 shadow-[inset_0_0_20px_rgba(239,68,68,0.2)] text-red-500';
+      case 'orange':  return 'border-amber-500 bg-amber-950/40 shadow-[inset_0_0_20px_rgba(245,158,11,0.2)] text-amber-500';
+      case 'purple':  return 'border-purple-500 bg-purple-950/40 shadow-[inset_0_0_20px_rgba(168,85,247,0.2)] text-purple-500';
+      case 'blue':    return 'border-blue-500 bg-blue-950/40 shadow-[inset_0_0_20px_rgba(59,130,246,0.2)] text-blue-500';
+      case 'green':   return 'border-emerald-500 bg-emerald-950/40 shadow-[inset_0_0_20px_rgba(16,185,129,0.2)] text-emerald-500';
+      default:        return 'border-white/10 bg-zinc-950/50 text-zinc-400';
+    }
+  };
+
+  return (
+    <div className="absolute inset-0 bg-black/98 backdrop-blur-3xl flex items-center justify-center z-[120] p-12 gap-8 animate-in zoom-in-95 duration-300">
+      <div className="w-[1000px] h-[90vh] bg-[#0a0a0a] border border-white/10 p-12 rounded-[60px] flex flex-col shadow-[0_0_100px_rgba(0,0,0,1)] relative overflow-hidden">
+        {/* Decorative background glow */}
+        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-amber-500/5 blur-[120px] -mr-32 -mt-32 rounded-full" />
+        
+        <div className="flex justify-between items-center mb-12 border-b border-white/5 pb-8">
+          <div className="flex items-center gap-6">
+             <div className="w-1.5 h-12 bg-amber-500 rounded-full" />
+             <div className="flex flex-col">
+               <span className="text-[10px] font-black uppercase text-zinc-500 tracking-[1em] mb-1 leading-none opacity-50">Equipment Inventory</span>
+               <h3 className="text-4xl font-black uppercase text-white leading-none tracking-tighter italic">
+                 {select.slot?.toUpperCase()} <span className="text-amber-500/80">• TRANG PHỤC</span>
+               </h3>
+             </div>
+          </div>
+          <button onClick={onClose} className="group relative px-10 py-3 overflow-hidden rounded-2xl transition-all">
+             <div className="absolute inset-0 bg-white/5 group-hover:bg-amber-500/10 border border-white/10 group-hover:border-amber-500/50 transition-all" />
+             <span className="relative z-10 text-zinc-500 group-hover:text-white uppercase font-black text-[11px] tracking-[0.3em]">Hồi Quy</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-8 gap-3 overflow-y-auto pr-3 custom-modal-scrollbar flex-1 pb-6">
+          {matchingItems.length === 0 && (
+             <div className="col-span-8 flex flex-col items-center justify-center py-40 opacity-20">
+                <div className="text-6xl mb-4">🏺</div>
+                <div className="text-sm font-black uppercase tracking-[1em]">KHO TRỐNG</div>
+             </div>
+          )}
+          {matchingItems.map((eq: any) => {
+            const power = getItemPower(eq);
+            const rClass = getRarityClass(eq.rarity);
+            const isEquipped = activeChar.equipment[select.slot]?.id === eq.id;
+
+            return (
+              <button 
+                key={eq.id} 
+                onClick={() => onSelect(eq.id)} 
+                className={`relative group aspect-square border-[1.5px] ${rClass} rounded-2xl flex items-center justify-center transition-all hover:scale-110 hover:z-40 active:scale-95 shadow-2xl overflow-hidden bg-black/40 backdrop-blur-sm`}
+              >
+                {/* Subtle Inner Highlight */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                
+                {/* Currently Equipped Indicator */}
+                {isEquipped && (
+                  <div className="absolute inset-0 bg-amber-500/10 border-2 border-amber-500/50 rounded-2xl animate-pulse z-0" />
+                )}
+
+                <div className="relative z-10 scale-100 group-hover:scale-110 transition-transform duration-300">
+                   <EquipmentIcon type={eq.type} level={eq.level || 0} rarity={eq.rarity} size="sm" />
+                </div>
+
+                {/* Overlays: Level */}
+                {eq.level > 0 && (
+                  <div className="absolute top-1 right-1 bg-amber-500 text-black text-[8px] px-1.5 py-0.5 font-black rounded-md shadow-lg z-20 border border-amber-300/30">
+                    +{eq.level}
+                  </div>
+                )}
+                
+                {/* Overlays: Power */}
+                <div className="absolute bottom-1 inset-x-1 bg-zinc-950/80 backdrop-blur-md py-0.5 rounded-lg text-center opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 z-20 border border-white/10">
+                   <span className="text-[7px] font-black text-amber-500 tabular-nums">
+                      {Math.floor(power).toLocaleString()}
+                   </span>
+                </div>
+
+                {/* Tooltip on Hover */}
+                <div className="absolute inset-x-0 top-0 hidden group-hover:flex items-center justify-center pointer-events-none z-30">
+                   <div className="bg-zinc-900 shadow-2xl px-2 py-0.5 rounded-b-md text-[7px] font-black text-white uppercase text-center w-full truncate border-x border-b border-white/20">
+                      {eq.name}
+                   </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        
         <button 
-          onClick={(e) => { e.stopPropagation(); onUpgrade(item); }}
-          className={`p-2 text-zinc-600 hover:text-amber-500 transition-colors ${side === 'right' ? 'mr-0' : ''}`}
-          title="Cường Hóa"
+          onClick={() => onSelect(null)} 
+          className="mt-12 py-6 bg-red-950/20 text-red-500 hover:bg-red-500/10 hover:text-red-400 uppercase font-black text-[11px] tracking-[0.8em] border border-red-500/20 rounded-[30px] transition-all shadow-xl active:scale-95"
         >
-          <ArrowUpCircle className="w-5 h-5" />
+          Gỡ Vật Phẩm Đang Dùng
         </button>
-      )}
+      </div>
+
+      <style>{`
+        .custom-modal-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-modal-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 10px; }
+        .custom-modal-scrollbar::-webkit-scrollbar-thumb { background: rgba(245,158,11,0.2); border-radius: 10px; transition: all 0.3s; }
+        .custom-modal-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(245,158,11,0.4); }
+      `}</style>
     </div>
   );
 }

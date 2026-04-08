@@ -6,6 +6,10 @@ import { useInventory, useMaterials, usePlayer, useTransferEquipment, usePlayerC
 import { EquipmentIcon } from "@/components/game/EquipmentIcon";
 import { toast } from "sonner";
 
+const SLOT_LABELS: Record<string, string> = {
+  shoes: 'Giày', hat: 'Mũ', armor: 'Giáp', ring: 'Nhẫn', belt: 'Đai', artifact: 'Pháp bảo',
+};
+
 export default function TransferScreen() {
   const navigate = useNavigate();
   const userId = localStorage.getItem('fern_user_id') || '';
@@ -20,12 +24,15 @@ export default function TransferScreen() {
   
   const ticketCount = materials?.find((m: any) => m.material_id === 'transfer_ticket')?.amount || 0;
 
-  // Equipment selection rules
-  // Source must have level > 0
-  // Target must be level 0 and same type (optional, but requested logic implies sharing lvl)
-  
   const sourceItem = useMemo(() => inventory?.find((eq: any) => eq.id === sourceId), [inventory, sourceId]);
   const targetItem = useMemo(() => inventory?.find((eq: any) => eq.id === targetId), [inventory, targetId]);
+
+  // If source changes and target is now incompatible (different type), reset target
+  useMemo(() => {
+    if (sourceItem && targetItem && sourceItem.type !== targetItem.type) {
+      setTargetId(null);
+    }
+  }, [sourceId]);
 
   const equippedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -43,12 +50,21 @@ export default function TransferScreen() {
   const kcCost = sourceItem ? (sourceItem.level * 20) : 0;
 
   const handleTransfer = () => {
-    if (!sourceId || !targetId) return;
+    if (!sourceId || !targetId) {
+      toast.error("Vui lòng chọn cả trang bị gốc và trang bị nhận!");
+      return;
+    }
+    
+    if (!sourceItem || !targetItem) {
+      toast.error("Không tìm thấy thông tin trang bị!");
+      return;
+    }
+
     if (ticketCount < 1) return toast.error("Không đủ Vé Chuyển Hóa!");
     if ((player?.coins || 0) < coinCost) return toast.error("Không đủ Vàng!");
     if ((player?.kc_balance || 0) < kcCost) return toast.error("Không đủ Kim Cương!");
 
-    if (window.confirm(`Xác nhận chuyển cấp +${sourceItem.level} từ ${sourceItem.name} sang ${targetItem.name}?`)) {
+    if (window.confirm(`Xác nhận chuyển cấp +${sourceItem.level} từ [${sourceItem.name}] sang [${targetItem.name}]?`)) {
       transferMutation.mutate({
         sourceId,
         targetId,
@@ -59,6 +75,10 @@ export default function TransferScreen() {
         onSuccess: () => {
           setSourceId(null);
           setTargetId(null);
+          toast.success("Khởi tạo tiến trình chuyển hóa linh cốt thành công!");
+        },
+        onError: (err: any) => {
+          toast.error("Lỗi chuyển hóa: " + (err.message || "Kết nối thất bại"));
         }
       });
     }
@@ -71,7 +91,7 @@ export default function TransferScreen() {
       <div className="absolute inset-0 bg-gradient-to-b from-amber-900/10 via-transparent to-zinc-950 z-0" />
       
       <div className="relative z-10 flex flex-col h-full max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-12">
+        <div className="flex justify-between items-center mb-12 relative z-30">
           <Button variant="ghost" onClick={() => navigate('/')} className="hover:bg-white/10 uppercase tracking-widest text-xs font-bold text-zinc-500">
             <ChevronLeft className="w-5 h-5 mr-3" /> Trở Về
           </Button>
@@ -130,7 +150,12 @@ export default function TransferScreen() {
            <div className="col-span-5 flex flex-col items-center h-full">
               <h3 className="text-sm font-black text-zinc-500 uppercase tracking-widest mb-6">Trang bị nhận (Lv 0)</h3>
               <div className="w-full flex-1 bg-zinc-950/50 border border-dashed border-white/10 p-6 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
-                {inventory?.filter((eq: any) => eq.level === 0 && eq.id !== sourceId).map(eq => (
+                {inventory?.filter((eq: any) => {
+                  const isLv0 = (eq.level || 0) === 0;
+                  const isNotSource = eq.id !== sourceId;
+                  const matchesType = !sourceItem || eq.type === sourceItem.type;
+                  return isLv0 && isNotSource && matchesType;
+                }).map(eq => (
                   <button 
                     key={eq.id}
                     onClick={() => setTargetId(eq.id === targetId ? null : eq.id)}
@@ -139,16 +164,26 @@ export default function TransferScreen() {
                     <EquipmentIcon type={eq.type} level={eq.level} rarity={eq.rarity} size="sm" />
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-black uppercase truncate">{eq.name}</div>
-                      <div className="text-[9px] text-zinc-500 font-bold tracking-widest">{eq.typeName}</div>
+                      <div className="text-[9px] text-zinc-500 font-bold tracking-widest">{SLOT_LABELS[eq.type] || eq.type}</div>
                     </div>
                   </button>
                 ))}
+                {sourceId && inventory?.filter(eq => (eq.level || 0) === 0 && eq.type === sourceItem.type).length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-full opacity-20 italic text-sm text-center">
+                    Không có {SLOT_LABELS[sourceItem.type]} Lv 0 trong túi đồ
+                  </div>
+                )}
+                {!sourceId && (
+                  <div className="flex flex-col items-center justify-center h-full opacity-20 italic text-sm text-center">
+                    Vui lòng chọn trang bị gốc trước
+                  </div>
+                )}
               </div>
            </div>
         </div>
 
         {/* Footer Summary & Action */}
-        <div className="bg-zinc-900 border border-white/10 p-8 flex justify-between items-center relative overflow-hidden shrink-0">
+        <div className="bg-zinc-900 border border-white/10 p-8 flex justify-between items-center relative z-50 overflow-hidden shrink-0 shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
            <div className="flex items-center gap-12">
               <div className="flex flex-col gap-1">
                  <span className="text-[9px] font-black uppercase text-zinc-500 tracking-widest flex items-center gap-2">
