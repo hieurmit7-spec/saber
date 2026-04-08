@@ -234,3 +234,14 @@ export const buyShopItem = async (userId: string, itemId: string, costKC: number
   });
   if (error) throw error;
 };
+
+export const claimGachaMilestone = async (userId: string, milestone: number, rewardType: string, rewardId: string, amount: number) => {
+  const { error } = await (supabase as any).rpc('rpc_claim_gacha_milestone', {
+    p_player_id: userId,
+    p_milestone: milestone,
+    p_reward_type: rewardType,
+    p_reward_id: rewardId,
+    p_amount: amount
+  });
+  if (error) throw error;
+};

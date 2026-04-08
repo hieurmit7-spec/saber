@@ -249,6 +249,7 @@ export default function BagScreen() {
               case 'rainbow': return 'border-indigo-400/50 bg-indigo-950/20 shadow-[0_0_15px_rgba(99,102,241,0.1)] text-indigo-400';
               case 'black':   return 'border-zinc-500/50 bg-zinc-900/20 text-zinc-300';
               case 'red':     return 'border-red-500/50 bg-red-950/20 text-red-500';
+              case 'gold':    return 'border-amber-400/50 bg-amber-950/20 text-amber-400 font-bold';
               case 'orange':  return 'border-amber-500/50 bg-amber-950/20 text-amber-500';
               case 'purple':  return 'border-purple-500/50 bg-purple-950/20 text-purple-500';
               case 'blue':    return 'border-blue-500/50 bg-blue-950/20 text-blue-500';
@@ -295,8 +296,19 @@ export default function BagScreen() {
                   </div>
                 )}
               </div>
-              <div className="text-xs font-black uppercase truncate">{eq.name}</div>
-              <div className="text-[9px] text-zinc-500 font-bold tracking-tighter uppercase mt-1">CP: {itemPower.toLocaleString()}</div>
+              <div className="text-xs font-black uppercase truncate mb-1">{eq.name}</div>
+              <div className="flex items-center justify-between">
+                <span 
+                  className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded-sm"
+                  style={{ 
+                    backgroundColor: { white: '#1e293b', green: '#064e3b', blue: '#1e3a8a', purple: '#581c87', gold: '#78350f', orange: '#7c2d12', red: '#7f1d1d', black: '#000', rainbow: '#4338ca' }[eq.rarity as string] || '#000',
+                    color: { white: '#94a3b8', green: '#34d399', blue: '#60a5fa', purple: '#a855f7', gold: '#fbbf24', orange: '#fb923c', red: '#ef4444', black: '#fff', rainbow: '#fff' }[eq.rarity as string] || '#fff'
+                  }}
+                >
+                  {{ white: 'Trắng', green: 'Lục', blue: 'Lam', purple: 'Tím', gold: 'Vàng', orange: 'Cam', red: 'Đỏ', rainbow: 'Phổ Quang', black: 'Huyền Thiết' }[eq.rarity as string] || eq.rarity}
+                </span>
+                <div className="text-[9px] text-zinc-500 font-bold tracking-tighter uppercase font-mono">CP: {itemPower.toLocaleString()}</div>
+              </div>
               
               {eq.type !== 'material' && (
                 <div className="mt-3 text-[10px] flex flex-col gap-1 opacity-80 font-mono">

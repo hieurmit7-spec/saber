@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getPlayerInfo, getPlayerCharacters, equipItemToCharacter, upgradeCharacterStar, upgradeCharacterLevel, updatePlayerKC, updatePlayerCoins, breakthroughCharacter, updateTeamSetup, getLeaderboard, getArenaOpponents, updatePlayerProfile, upgradeEquipment, buyShopItem } from '@/services/playerService';
+import { getPlayerInfo, getPlayerCharacters, equipItemToCharacter, upgradeCharacterStar, upgradeCharacterLevel, updatePlayerKC, updatePlayerCoins, breakthroughCharacter, updateTeamSetup, getLeaderboard, getArenaOpponents, updatePlayerProfile, upgradeEquipment, buyShopItem, claimGachaMilestone } from '@/services/playerService';
 import { getInventory, getPlayerMaterials, deleteEquipments, transferEquipmentLevel } from '@/services/equipmentService';
 import { rollGachaRPC } from '@/services/gachaService';
 import { SABER, SASUKE, PETER, GOJO, FRIEREN, BASE_CHARACTERS } from '@/constants/gameData';
@@ -321,6 +321,25 @@ export const useBuyShopItem = (userId: string) => {
     },
     onError: (err: any) => {
       toast.error('Mua thất bại: ' + err.message);
+    }
+  });
+};
+
+export const useClaimMilestone = (userId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: { milestone: number, rewardType: string, rewardId: string, amount: number }) =>
+      claimGachaMilestone(userId, params.milestone, params.rewardType, params.rewardId, params.amount),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['player', userId] });
+      queryClient.invalidateQueries({ queryKey: ['materials', userId] });
+      queryClient.invalidateQueries({ queryKey: ['inventory', userId] });
+      queryClient.invalidateQueries({ queryKey: ['characters', userId] });
+      toast.success('Nhận quà mốc thành công!');
+    },
+    onError: (err: any) => {
+      toast.error('Nhận quà thất bại: ' + err.message);
     }
   });
 };

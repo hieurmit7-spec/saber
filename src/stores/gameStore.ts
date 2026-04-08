@@ -2,16 +2,16 @@ import { create } from 'zustand';
 
 export const STAT_SCALE_FACTORS = {
   hp: 1.0,
-  dmg: 0.25,
-  armor: 0.18,
-  speed: 0.05
+  dmg: 1.0,
+  armor: 0.8,
+  speed: 0.2
 };
 
 export const STAT_BONUS_TABLE = [
-  0, 0.05, 0.10, 0.15, 0.20,
-  0.30, 0.40, 0.50, 0.65,
-  0.80, 1.00, 1.25, 1.55,
-  1.90, 2.30, 2.80, 3.50
+  0, 0.10, 0.20, 0.35, 0.50,
+  0.70, 0.95, 1.25, 1.60,
+  2.00, 2.50, 3.10, 3.80,
+  4.60, 5.50, 6.50, 8.00
 ];
 
 // --- STAR LIMIT BREAK SYSTEM (46 STEPS) ---

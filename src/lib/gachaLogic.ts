@@ -1,48 +1,48 @@
 import { Equipment } from '@/stores/gameStore';
 import { EQUIP_NAMES, EQUIP_TYPE_NAMES } from '@/constants/gameData';
 
-const RARITY_MULTIPLIERS: Record<Equipment['rarity'], number> = {
-  white: 1.0,    
-  green: 1.8,    
-  blue: 3.5,    
-  purple: 8.0,  
-  gold: 20.0,    
-  orange: 50.0,  
-  red: 125.0,     
-  black: 300.0,  
-  rainbow: 750.0 
+/**
+ * ĐẠI TU CHỈ SỐ CƠ BẢN:
+ * Mỗi phẩm chất có một khoảng nhân (Multiplier Range) cố định.
+ * QUY TẮC: Min của phẩm chất hiện tại LUÔN LỚN HƠN Max của phẩm chất thấp hơn liền kề.
+ */
+const RARITY_POWER_RANGES: Record<Equipment['rarity'], { min: number, max: number }> = {
+  white:   { min: 1.0,    max: 1.5 },
+  green:   { min: 2.0,    max: 3.5 },
+  blue:    { min: 5.0,    max: 10.0 },
+  purple:  { min: 15.0,   max: 30.0 },
+  gold:    { min: 50.0,   max: 100.0 },
+  orange:  { min: 150.0,  max: 350.0 },
+  red:     { min: 500.0,  max: 1200.0 },
+  black:   { min: 2000.0, max: 5000.0 },
+  rainbow: { min: 8000.0, max: 20000.0 }
 };
 
 export function rollEquipmentRarity(): Equipment['rarity'] {
   const r = Math.random() * 100;
-  if (r < 30) return 'white';
-  if (r < 55) return 'green';
-  if (r < 75) return 'blue';
-  if (r < 88) return 'purple';
-  if (r < 95) return 'gold';
-  if (r < 98) return 'orange';
-  if (r < 99.5) return 'red';
-  if (r < 99.9) return 'black';
-  return 'rainbow';
+  if (r < 45) return 'white';     // 45%
+  if (r < 75) return 'green';     // 30%
+  if (r < 90) return 'blue';      // 15%
+  if (r < 96) return 'purple';    // 6%
+  if (r < 98.7) return 'gold';    // 2.7%
+  if (r < 99.7) return 'orange';  // 1%
+  if (r < 99.9) return 'red';     // 0.2%
+  if (r < 99.98) return 'black';  // 0.08%
+  return 'rainbow';               // 0.02%
 }
 
-export function generateEquipment(rarity: Equipment['rarity'], forceType?: Equipment['type']): Equipment {
+export function generateEquipment(rarity: Equipment['rarity'], options?: { forceType?: Equipment['type'], isGacha?: boolean }): Equipment {
   const types: Equipment['type'][] = ['shoes', 'hat', 'armor', 'ring', 'belt', 'artifact'];
-  const type = forceType || types[Math.floor(Math.random() * types.length)];
+  const type = options?.forceType || types[Math.floor(Math.random() * types.length)];
   const names = EQUIP_NAMES[type];
-  const mult = RARITY_MULTIPLIERS[rarity];
   
-  // Fixed Main Stat Type based on Equipment Type
   const mainStatType: keyof Equipment['stats'] = 
     (type === 'shoes') ? 'speed' :
     (type === 'armor') ? 'armor' :
-    (type === 'hat' || type === 'belt') ? 'hp' : 'dmg'; // ring/artifact = dmg
+    (type === 'hat' || type === 'belt') ? 'hp' : 'dmg';
 
   const allStatKeys: (keyof Equipment['stats'])[] = ['hp', 'speed', 'armor', 'dmg'];
   
-  // Pick Sub Stats
-  // Low rarity: 0-1 sub stats
-  // High rarity: 2-3 sub stats
   let subStatCount = 1;
   if (rarity === 'white' || rarity === 'green') subStatCount = 1;
   else if (rarity === 'blue' || rarity === 'purple') subStatCount = 2;
@@ -56,18 +56,28 @@ export function generateEquipment(rarity: Equipment['rarity'], forceType?: Equip
     hp: 100, speed: 8, armor: 50, dmg: 35
   };
 
+  const range = RARITY_POWER_RANGES[rarity];
+  let minQ = range.min;
+  const maxQ = range.max;
+
+  // Đặc biệt: Trang bị rainbow từ gacha phải có chỉ số tầm trung trở lên
+  if (rarity === 'rainbow' && options?.isGacha) {
+    minQ = (range.min + range.max) / 2;
+  }
+
   const finalStats: Equipment['stats'] = {};
+  const rollMainMult = minQ + Math.random() * (maxQ - minQ);
+  finalStats[mainStatType] = Math.floor(baseValues[mainStatType] * rollMainMult);
   
-  // Calculate Main Stat
-  finalStats[mainStatType] = Math.floor(baseValues[mainStatType] * (1.1 + Math.random() * 0.4) * mult);
-  
-  // Add Sub Stats
   subStats.forEach(s => {
-    const val = Math.floor(baseValues[s] * (0.4 + Math.random() * 0.4) * mult);
+    // Chỉ số phụ hưởng 30% - 60% giá trị multiplier của chỉ số chính
+    const subMult = rollMainMult * (0.3 + Math.random() * 0.3);
+    const val = Math.floor(baseValues[s] * subMult);
     finalStats[s] = (finalStats[s] || 0) + val;
   });
 
-  const nameIndex = Math.min(Object.keys(RARITY_MULTIPLIERS).indexOf(rarity), names.length - 1);
+  const raritiesInOrder: Equipment['rarity'][] = ['white', 'green', 'blue', 'purple', 'gold', 'orange', 'red', 'black', 'rainbow'];
+  const nameIndex = Math.min(raritiesInOrder.indexOf(rarity), names.length - 1);
   const uuid = (typeof crypto !== 'undefined' && crypto.randomUUID) 
     ? crypto.randomUUID() 
     : `eq-${Date.now()}-${Math.floor(Math.random()*10000)}`;
@@ -94,7 +104,6 @@ export function performGachaRolls(count: number, currentPity: number, currentBan
   for (let i = 0; i < count; i++) {
     pity++;
     
-    // Hard Pity 50: Guaranteed Hero based on Banner
     if (pity >= 50) {
       shards.push({ character_id: currentBanner, amount: 10 });
       results.push({ type: 'character', item: { id: currentBanner, name: `${currentBanner.toUpperCase()} Shards x10`, rarity: 'gold' } });
@@ -102,26 +111,35 @@ export function performGachaRolls(count: number, currentPity: number, currentBan
     } else {
       const r = Math.random() * 100;
       
-      // 3% Chance for Hero Shards (Banner specific)
-      if (r < 3) {
+      if (r < 4) {
         shards.push({ character_id: currentBanner, amount: 5 });
         results.push({ type: 'character', item: { id: currentBanner, name: `${currentBanner.toUpperCase()} Shards x5`, rarity: 'purple' } });
       } 
-      // 1% Chance for Breakthrough Stone (New!)
-      else if (r < 4) {
-        materials.push({ material_id: `magic_stone`, amount: 1 });
+      else if (r < 10) {
+        const stoneRoll = Math.random() * 100;
+        let amount = 1;
+        let rarity: Equipment['rarity'] = 'rainbow';
+        
+        if (stoneRoll < 1) {
+          amount = 50;
+          rarity = 'black';
+        } else if (stoneRoll < 5) {
+          amount = 10;
+          rarity = 'red';
+        }
+        
+        materials.push({ material_id: `magic_stone`, amount });
         results.push({ 
           type: 'material', 
           item: { 
             id: `magic_stone`, 
-            name: `Đá Đột Phá`, 
-            rarity: 'rainbow',
-            amount: 1 
+            name: `Đá Đột Phá x${amount}`, 
+            rarity,
+            amount 
           } 
         });
       }
-      // 15% Chance for Upgrade Stones
-      else if (r < 19) {
+      else if (r < 25) {
         let stoneLv = 1;
         const sr = Math.random() * 100;
         if (sr < 50) stoneLv = 1;
@@ -145,17 +163,15 @@ export function performGachaRolls(count: number, currentPity: number, currentBan
           } 
         });
       }
-      // Rest is Equipment
       else {
         const rarity = rollEquipmentRarity();
-        const eq = generateEquipment(rarity);
+        const eq = generateEquipment(rarity, { isGacha: true });
         equipments.push(eq);
         results.push({ type: 'equipment', item: eq });
       }
     }
   }
 
-  // Aggregate identical shards to prevent DB duplicate row update crash
   const aggShards = shards.reduce((acc, curr) => {
     const existing = acc.find(s => s.character_id === curr.character_id);
     if (existing) existing.amount += curr.amount;
@@ -163,7 +179,6 @@ export function performGachaRolls(count: number, currentPity: number, currentBan
     return acc;
   }, [] as typeof shards);
 
-  // Aggregate identical materials to prevent DB duplicate row update crash
   const aggMaterials = materials.reduce((acc, curr) => {
     const existing = acc.find(m => m.material_id === curr.material_id);
     if (existing) existing.amount += curr.amount;

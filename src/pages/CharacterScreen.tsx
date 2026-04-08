@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Star, Footprints, HardHat, Shield, Disc, GripHorizontal, Sparkles, ArrowUpCircle, ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronLeft, Star, Footprints, HardHat, Shield, Disc, GripHorizontal, Sparkles, ArrowUpCircle, ChevronUp, ChevronDown, Sword } from "lucide-react";
 import { useHydratedCharacters, useInventory, useEquipItem, useUpgradeStar, useUpgradeLevel, usePlayer, useMaterials, useBreakthrough } from "@/hooks/usePlayerData";
 import { 
   getCharacterTotalStats, 
@@ -160,16 +160,47 @@ export default function CharacterScreen() {
 
         {/* Center: Visual & Equipment */}
         <div className="flex-1 flex flex-col items-center relative">
-          <div className="absolute top-0 flex flex-col items-center">
-            <h1 className="text-7xl font-black text-white uppercase tracking-widest drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]">
-              {activeChar.name}
-            </h1>
-            <div className="flex items-center gap-3 mt-2">
-              <span className={`text-xs font-bold uppercase tracking-widest ${realmStage.color}`}>{realmStage.label}</span>
-              <span className="w-1 h-1 bg-zinc-700 rounded-full" />
-              <span className="text-amber-500 font-display text-xl uppercase tracking-widest">{realmTitle}</span>
+          <div className="absolute top-0 w-full flex justify-between items-start pointer-events-none">
+            {/* Left Header: Name & Realm */}
+            <div className="flex flex-col gap-2 pointer-events-auto">
+              <div className="flex items-center gap-3">
+                <h1 className="text-6xl font-black text-white uppercase tracking-tighter drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]">
+                  {activeChar.name}
+                </h1>
+                <div className="animate-pulse px-3 py-1 bg-amber-500/10 border border-amber-500/40 rounded-lg text-[10px] text-amber-500 font-black uppercase tracking-widest shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+                  LEVEL {activeChar.level}
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  <span className={`text-sm font-black uppercase tracking-[0.3em] ${realmStage.color} drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]`}>
+                    {realmStage.label}
+                  </span>
+                </div>
+                <div className="text-3xl font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-600 drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)] mt-1">
+                  {realmTitle}
+                </div>
+              </div>
             </div>
-            <p className="text-zinc-500 tracking-[0.4em] text-[10px] uppercase mt-1">Chiến lực: {cp.toLocaleString()}</p>
+
+            {/* Right Header: Combat Power Status Card */}
+            <div className="flex flex-col items-end gap-1 pointer-events-auto">
+              <div className="text-[10px] font-black uppercase tracking-[0.6em] text-zinc-500 mb-1 pr-4">Absolute Strength</div>
+              <div className="relative group">
+                <div className="absolute inset-x-[-30px] inset-y-[-10px] bg-amber-500/30 blur-[40px] opacity-100 group-hover:bg-amber-500/50 transition-all duration-1000" />
+                <div className="flex items-baseline gap-4 bg-black/60 border border-amber-500/20 px-10 py-3 rounded-2xl backdrop-blur-3xl relative z-10 shadow-2xl overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+                  <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-amber-100 via-amber-400 to-amber-600 italic tracking-tighter filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+                    {cp.toLocaleString()}
+                  </span>
+                  <Sword className="w-6 h-6 text-amber-500 animate-[bounce_1.5s_infinite]" />
+                </div>
+              </div>
+              <div className="text-[9px] text-zinc-500 uppercase tracking-widest mt-2 bg-white/5 px-3 py-1 border border-white/5 rounded-full">
+                Hạng Đấu Trường: Top {{ 1: '1', 2: '12', 3: '45' }[player?.pvp_rank_level || 1] || '99+'}
+              </div>
+            </div>
           </div>
 
           <div className="w-[400px] h-[500px] mt-24 relative flex items-center justify-center pointer-events-none">

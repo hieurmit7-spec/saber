@@ -143,7 +143,18 @@ export default function EquipmentUpgradeModal({
           </div>
           <div className="relative z-10">
             <div className="text-2xl font-black text-white uppercase tracking-tighter mb-1">{equipment.name}</div>
-            <div className="text-[10px] text-amber-500 font-bold uppercase tracking-[0.4em] mb-4 opacity-70">{equipment.typeName}</div>
+            <div className="flex items-center gap-2 mb-4">
+              <span 
+                className="text-[9px] font-black uppercase px-2 py-0.5 rounded-sm"
+                style={{ 
+                  backgroundColor: { white: '#1e293b', green: '#064e3b', blue: '#1e3a8a', purple: '#581c87', gold: '#78350f', orange: '#7c2d12', red: '#7f1d1d', black: '#000', rainbow: '#4338ca' }[equipment.rarity] || '#000',
+                  color: { white: '#94a3b8', green: '#34d399', blue: '#60a5fa', purple: '#a855f7', gold: '#fbbf24', orange: '#fb923c', red: '#ef4444', black: '#fff', rainbow: '#fff' }[equipment.rarity] || '#fff'
+                }}
+              >
+                {{ white: 'Trắng', green: 'Lục', blue: 'Lam', purple: 'Tím', gold: 'Vàng', orange: 'Cam', red: 'Đỏ', rainbow: 'Phổ Quang', black: 'Huyền Thiết' }[equipment.rarity] || equipment.rarity}
+              </span>
+              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.4em] opacity-70">{equipment.typeName}</div>
+            </div>
             <div className="flex items-center gap-2">
               <span className="text-zinc-500 text-xs uppercase font-bold">Cấp hiện tại:</span>
               <span className="text-amber-500 font-black text-xl">+{currentLevel}</span>

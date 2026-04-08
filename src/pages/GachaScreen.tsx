@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Footprints, HardHat, Shield, Disc, GripHorizontal, Sparkles } from "lucide-react";
-import { usePlayer, useRollGacha } from "@/hooks/usePlayerData";
+import { usePlayer, useRollGacha, useClaimMilestone } from "@/hooks/usePlayerData";
+import { ChevronLeft, Footprints, HardHat, Shield, Disc, GripHorizontal, Sparkles, Gift, Trophy, CheckCircle2 } from "lucide-react";
 import { performGachaRolls } from "@/lib/gachaLogic";
 import { toast } from "sonner";
 import { EquipmentIcon } from "@/components/game/EquipmentIcon";
@@ -13,6 +13,75 @@ export default function GachaScreen() {
   
   const { data: player } = usePlayer(userId);
   const { mutate: callGachaRPC } = useRollGacha(userId);
+  const claimMutation = useClaimMilestone(userId);
+
+  const totalPulls = player?.total_gacha_pulls || 0;
+  const claimedMilestones = player?.gacha_milestone_claimed || [];
+
+  const MILESTONES = [
+    { count: 10, reward: '500 KC', type: 'kc', amount: 500 },
+    { count: 20, reward: '1,000 KC', type: 'kc', amount: 1000 },
+    { count: 40, reward: '2 Đá Đột Phá', type: 'stone', amount: 2 },
+    { count: 80, reward: '5 Đá Đột Phá', type: 'stone', amount: 5 },
+    { count: 100, reward: '2,000 KC', type: 'kc', amount: 2000 },
+    { count: 150, reward: '10 Đá Đột Phá', type: 'stone', amount: 10 },
+    { count: 200, reward: '5,000 KC', type: 'kc', amount: 5000 },
+    { count: 300, reward: '20 Đá Đột Phá', type: 'stone', amount: 20 },
+    { count: 400, reward: '50 Đá Đột Phá', type: 'stone', amount: 50 },
+    { count: 500, reward: '10,000 KC', type: 'kc', amount: 10000 },
+    { count: 1000, reward: 'Rainbow Tự Chọn', type: 'rainbow_selector', amount: 1 },
+  ];
+
+  const [showSelector, setShowSelector] = useState(false);
+  const [selectedMilestone, setSelectedMilestone] = useState<number | null>(null);
+  const [claimedReward, setClaimedReward] = useState<any | null>(null);
+
+  const getChestImage = (count: number, isClaimed: boolean) => {
+    if (isClaimed) return '/icon rpg/treasure_chest_unlock.png';
+    if (count <= 80) return '/icon rpg/treasure-chest_lock.png';
+    if (count <= 200) return '/icon rpg/treasure-chest_100scores.png';
+    if (count <= 400) return '/icon rpg/treasure_chest_300scores.png';
+    if (count === 500) return '/icon rpg/treasure-chest_500scores.png';
+    return '/icon rpg/treasure-chest_1000scores.png'; // 1000
+  };
+
+  const handleClaim = (m: any) => {
+    if (totalPulls < m.count || claimedMilestones.includes(m.count)) return;
+    
+    if (m.type === 'rainbow_selector') {
+      setSelectedMilestone(m.count);
+      setShowSelector(true);
+    } else {
+      claimMutation.mutate({
+        milestone: m.count,
+        rewardType: m.type,
+        rewardId: '',
+        amount: m.amount
+      }, {
+        onSuccess: () => {
+          setClaimedReward(m);
+        }
+      });
+    }
+  };
+
+  const handleChooseRainbow = (type: string) => {
+    if (!selectedMilestone) return;
+    const milestoneData = MILESTONES.find(m => m.count === selectedMilestone);
+
+    claimMutation.mutate({
+      milestone: selectedMilestone,
+      rewardType: 'rainbow_selector',
+      rewardId: type,
+      amount: 1
+    }, {
+      onSuccess: () => {
+        setShowSelector(false);
+        setClaimedReward({ ...milestoneData, reward: `Trang bị Rainbow (${type})` });
+        setSelectedMilestone(null);
+      }
+    });
+  };
 
   // Local Pity Counter (Could be synced to DB, but keep local for demo)
   const [pityCounter, setPityCounter] = useState(0);
@@ -193,6 +262,55 @@ export default function GachaScreen() {
         </button>
       </div>
 
+      {/* Gacha Milestones Sidebar */}
+      <div className="absolute top-1/2 -translate-y-1/2 left-8 z-10 flex flex-col gap-2 w-44 bg-black/40 backdrop-blur-md p-4 border border-white/5 max-h-[60vh] overflow-y-auto custom-scrollbar">
+         <div className="flex items-center gap-2 mb-3 border-b border-white/10 pb-2">
+            <Trophy className="w-4 h-4 text-amber-500" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300">Mốc Tích Lũy</span>
+         </div>
+         <div className="text-[10px] text-zinc-500 mb-2 font-bold px-1 uppercase">Tổng: {totalPulls} lượt</div>
+         
+         <div className="flex flex-col gap-3">
+            {MILESTONES.map((m) => {
+              const isClaimed = claimedMilestones.includes(m.count);
+              const canClaim = totalPulls >= m.count && !isClaimed;
+              
+              return (
+                <button 
+                  key={m.count}
+                  disabled={isClaimed || !canClaim && totalPulls < m.count}
+                  onClick={() => handleClaim(m)}
+                  className={`group relative p-2 border transition-all flex items-center gap-3 ${
+                    isClaimed 
+                      ? 'bg-zinc-900/50 border-zinc-800 opacity-50' 
+                      : canClaim 
+                        ? 'bg-amber-500/20 border-amber-500 animate-pulse' 
+                        : 'bg-zinc-950/20 border-white/5 hover:border-white/20'
+                  }`}
+                >
+                  <div className="relative w-10 h-10 shrink-0">
+                    <img 
+                      src={getChestImage(m.count, isClaimed)} 
+                      className={`w-full h-full object-contain ${canClaim && !isClaimed ? 'animate-bounce' : ''}`}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-0.5 text-left flex-1">
+                    <div className="flex justify-between items-center">
+                       <span className={`text-[9px] font-black ${canClaim ? 'text-amber-400' : 'text-zinc-600'}`}>{m.count} LƯỢT</span>
+                       {isClaimed && <CheckCircle2 className="w-3 h-3 text-green-500" />}
+                    </div>
+                    <div className="text-[10px] font-bold text-white truncate leading-tight">{m.reward}</div>
+                  </div>
+                  
+                  {!isClaimed && canClaim && (
+                    <div className="absolute -inset-[1px] border border-amber-500 blur-sm opacity-50 pointer-events-none" />
+                  )}
+                </button>
+              );
+            })}
+         </div>
+      </div>
+
       <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex flex-col items-center gap-6 z-10">
         <label className="flex items-center gap-2 cursor-pointer text-zinc-400 hover:text-white transition-colors bg-black/40 px-4 py-2 border border-white/10 shadow-lg">
           <input type="checkbox" checked={autoSkip} onChange={e => setAutoSkip(e.target.checked)} className="accent-amber-500 w-4 h-4 cursor-pointer" />
@@ -276,8 +394,8 @@ export default function GachaScreen() {
                         <span className="text-[10px] font-bold text-center px-1 line-clamp-1 leading-tight uppercase tracking-[0.1em] text-zinc-300">
                           {res.item.name}
                         </span>
-                        <span className="text-[8px] font-black uppercase mt-1 px-1 py-0.5 rounded-sm" style={{ backgroundColor: { white: '#1e293b', blue: '#1e3a8a', purple: '#581c87', gold: '#78350f', orange: '#7c2d12', red: '#7f1d1d' }[res.item.rarity] || '#000', color: { white: '#94a3b8', blue: '#60a5fa', purple: '#a855f7', gold: '#fbbf24', orange: '#fb923c', red: '#ef4444' }[res.item.rarity] || '#fff' }}>
-                          {{ white: 'Trắng', blue: 'Lam', purple: 'Tím', gold: 'Vàng', orange: 'Cam', red: 'Đỏ', rainbow: 'Phổ Quang', black: 'Huyền Thiết' }[res.item.rarity] || res.item.rarity}
+                        <span className="text-[8px] font-black uppercase mt-1 px-1 py-0.5 rounded-sm" style={{ backgroundColor: { white: '#1e293b', green: '#064e3b', blue: '#1e3a8a', purple: '#581c87', gold: '#78350f', orange: '#7c2d12', red: '#7f1d1d' }[res.item.rarity] || '#000', color: { white: '#94a3b8', green: '#34d399', blue: '#60a5fa', purple: '#a855f7', gold: '#fbbf24', orange: '#fb923c', red: '#ef4444' }[res.item.rarity] || '#fff' }}>
+                          {{ white: 'Trắng', green: 'Lục', blue: 'Lam', purple: 'Tím', gold: 'Vàng', orange: 'Cam', red: 'Đỏ', rainbow: 'Phổ Quang', black: 'Huyền Thiết' }[res.item.rarity] || res.item.rarity}
                         </span>
                       </>
                     )}
@@ -301,6 +419,68 @@ export default function GachaScreen() {
               </button>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Rainbow Selector Modal */}
+      {showSelector && (
+        <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-3xl animate-in fade-in duration-500">
+           <div className="max-w-2xl w-full p-12 text-center bg-zinc-950/50 border border-amber-500/20 shadow-[0_0_100px_rgba(245,158,11,0.1)]">
+              <Sparkles className="w-16 h-16 text-amber-500 mx-auto mb-6" />
+              <h2 className="text-4xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-white to-indigo-500 leading-tight mb-2">
+                BẢN GIAO HƯỞNG CỦA PHỔ QUANG
+              </h2>
+              <p className="text-zinc-500 font-bold uppercase tracking-[0.4em] text-[10px] mb-12">Chọn một trang bị Rainbow tối thượng làm phần thưởng mốc 1000 lượt</p>
+              
+              <div className="grid grid-cols-3 gap-6 mb-12">
+                 {[
+                   { id: 'shoes', name: 'Giày', icon: <Footprints /> },
+                   { id: 'hat', name: 'Mũ', icon: <HardHat /> },
+                   { id: 'armor', name: 'Áo Giáp', icon: <Shield /> },
+                   { id: 'ring', name: 'Nhẫn', icon: <Disc /> },
+                   { id: 'belt', name: 'Thắt Lưng', icon: <GripHorizontal /> },
+                   { id: 'artifact', name: 'Pháp Bảo', icon: <Sparkles /> },
+                 ].map(t => (
+                   <button 
+                     key={t.id}
+                     onClick={() => handleChooseRainbow(t.id)}
+                     className="group flex flex-col items-center justify-center p-6 border border-white/5 bg-zinc-900/40 hover:bg-white/5 hover:border-amber-500 transition-all rounded-sm"
+                   >
+                     <div className="w-12 h-12 flex items-center justify-center text-zinc-500 group-hover:text-amber-500 transition-colors">
+                        {t.icon}
+                     </div>
+                     <span className="mt-3 text-[10px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-white transition-colors">{t.name}</span>
+                   </button>
+                 ))}
+              </div>
+              
+              <Button 
+                variant="ghost" 
+                onClick={() => setShowSelector(false)}
+                className="text-zinc-600 hover:text-white font-black uppercase tracking-widest text-[9px]"
+              >
+                Hủy & Để Sau
+              </Button>
+           </div>
+        </div>
+      )}
+
+      {/* Claim Success Modal */}
+      {claimedReward && (
+        <div className="absolute inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+           <div className="bg-zinc-900 border-2 border-amber-500 p-8 text-center max-w-sm w-full shadow-[0_0_50px_rgba(245,158,11,0.3)]">
+              <div className="w-24 h-24 mx-auto mb-6 bg-amber-500/10 rounded-full flex items-center justify-center border border-amber-500/30">
+                 <img src="/icon rpg/treasure_chest_unlock.png" className="w-16 h-16 object-contain" />
+              </div>
+              <h3 className="text-2xl font-black text-amber-500 uppercase tracking-tighter mb-2">NHẬN QUÀ THÀNH CÔNG</h3>
+              <p className="text-white font-bold text-lg mb-8">{claimedReward.reward}</p>
+              <Button 
+                onClick={() => setClaimedReward(null)}
+                className="w-full bg-amber-500 hover:bg-amber-600 text-black font-black uppercase tracking-widest"
+              >
+                XÁC NHẬN
+              </Button>
+           </div>
         </div>
       )}
     </div>
