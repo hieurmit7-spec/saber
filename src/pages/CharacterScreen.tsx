@@ -12,7 +12,10 @@ import {
   getRealmStage, 
   getLevelCap,
   getRequiredExp,
-  REALM_DATA
+  REALM_DATA,
+  STAT_BONUS_TABLE,
+  STAT_SCALE_FACTORS,
+  getEquipCP
 } from "@/stores/gameStore";
 import { toast } from "sonner";
 import EquipmentUpgradeModal from "@/components/game/EquipmentUpgradeModal";
@@ -286,7 +289,7 @@ export default function CharacterScreen() {
                 onClick={handleUpgrade}
                 className="w-full border-2 border-amber-500/50 hover:bg-amber-500/10 disabled:opacity-20 text-amber-500 font-black uppercase tracking-widest py-5 rounded-2xl transition-all"
               >
-                Nâng Sao / Bậc Sẹo
+                Nâng Sao
               </button>
            </div>
 
@@ -396,14 +399,33 @@ function ModernStat({ icon, label, val, base }: any) {
 }
 
 function EquipSlot({ label, item, slot, onSelect, onUpgrade, side = 'left', activeCharId, className }: any) {
+  const getQualityColor = (rarity: string) => {
+    const colors: Record<string, string> = {
+      common: 'text-zinc-500',
+      uncommon: 'text-green-500',
+      rare: 'text-blue-500',
+      epic: 'text-purple-500',
+      orange: 'text-amber-500',
+      legendary: 'text-amber-500',
+      red: 'text-red-500',
+      rainbow: 'text-indigo-400'
+    };
+    return colors[rarity?.toLowerCase()] || 'text-zinc-400';
+  };
+
   const getRarityClass = (rarity: string) => {
-    switch (rarity) {
-      case 'rainbow': return 'border-indigo-400 bg-indigo-950/20 shadow-indigo-500/30';
-      case 'red':     return 'border-red-500 bg-red-950/20';
-      case 'orange':  return 'border-amber-500 bg-amber-950/20';
-      case 'purple':  return 'border-purple-500 bg-purple-950/20';
-      case 'blue':    return 'border-blue-500 bg-blue-950/20';
-      case 'green':   return 'border-emerald-500 bg-emerald-950/20';
+    switch (rarity?.toLowerCase()) {
+      case 'rainbow': return 'border-indigo-400/50 bg-indigo-950/20 shadow-indigo-500/30';
+      case 'mythic':  
+      case 'red':     return 'border-red-500/50 bg-red-950/20 shadow-red-500/10';
+      case 'legendary':
+      case 'orange':  return 'border-amber-500/50 bg-amber-950/20 shadow-amber-500/10';
+      case 'epic':    
+      case 'purple':  return 'border-purple-500/50 bg-purple-950/20 shadow-purple-500/10';
+      case 'rare':    
+      case 'blue':    return 'border-blue-500/50 bg-blue-950/20 shadow-blue-500/10';
+      case 'uncommon':
+      case 'green':   return 'border-emerald-500/50 bg-emerald-950/20';
       default:        return 'border-white/5 bg-black/40 hover:border-white/20';
     }
   };
@@ -421,9 +443,19 @@ function EquipSlot({ label, item, slot, onSelect, onUpgrade, side = 'left', acti
       </button>
       <div className="flex-1 min-w-0">
         <div className="text-[8px] text-zinc-600 uppercase font-black tracking-widest mb-1">{label}</div>
-        <button onClick={() => onSelect({ charId: activeCharId, slot })} className="text-xs font-black truncate max-w-[120px] hover:text-amber-500 transition-colors uppercase italic block">{item ? item.name : 'VÔ CHỦ'}</button>
+        <button 
+          onClick={() => onSelect({ charId: activeCharId, slot })} 
+          className={`text-xs font-black truncate max-w-[120px] hover:text-amber-500 transition-colors uppercase italic block ${item ? getQualityColor(item.rarity) : 'text-zinc-500'}`}
+        >
+          {item ? item.name : 'VÔ CHỦ'}
+        </button>
         {item && (
-          <button onClick={() => onUpgrade(item)} className="mt-2 text-amber-500/50 hover:text-amber-500 transition-colors"><ArrowUpCircle className="w-4 h-4" /></button>
+           <div className="flex items-center gap-3 mt-2">
+              <button onClick={() => onUpgrade(item)} className="text-amber-500/50 hover:text-amber-500 transition-colors">
+                <ArrowUpCircle className="w-4 h-4" />
+              </button>
+              <div className="text-[8px] font-black text-amber-500/40 uppercase">CP: {item.cp?.toLocaleString() || item.combat_power?.toLocaleString() || '0'}</div>
+           </div>
         )}
       </div>
     </div>
@@ -483,14 +515,25 @@ function ResourceReq({ label, icon, current, req, has, isKC }: any) {
 }
 
 function EquipSelectDialog({ activeChar, FULL_CHARACTERS, item: select, onSelect, onClose, inventory }: any) {
-  const getItemPower = (eq: any) => {
-    if (!eq || !eq.stats) return 0;
-    return (eq.stats.hp || 0) * 0.4 + (eq.stats.dmg || 0) * 10 + (eq.stats.armor || 0) * 2 + (eq.stats.speed || 0) * 25 + (eq.level || 0) * 100;
-  };
+  const getItemPower = (eq: any) => getEquipCP(eq);
 
   const matchingItems = (inventory || [])
     .filter((eq: any) => eq.type === select.slot && !FULL_CHARACTERS.some((c: any) => c.isUnlocked && c.id !== select.charId && Object.values(c.equipment).some((e: any) => e?.id === eq.id)))
     .sort((a: any, b: any) => getItemPower(b) - getItemPower(a));
+
+  const getQualityColor = (rarity: string) => {
+    const colors: Record<string, string> = {
+      common: 'text-zinc-500',
+      uncommon: 'text-green-500',
+      rare: 'text-blue-500',
+      epic: 'text-purple-500',
+      orange: 'text-amber-500',
+      legendary: 'text-amber-500',
+      red: 'text-red-500',
+      rainbow: 'text-indigo-400'
+    };
+    return colors[rarity?.toLowerCase()] || 'text-zinc-400';
+  };
 
   const getRarityClass = (rarity: string) => {
     switch (rarity) {
@@ -572,7 +615,7 @@ function EquipSelectDialog({ activeChar, FULL_CHARACTERS, item: select, onSelect
 
                 {/* Tooltip on Hover */}
                 <div className="absolute inset-x-0 top-0 hidden group-hover:flex items-center justify-center pointer-events-none z-30">
-                   <div className="bg-zinc-900 shadow-2xl px-2 py-0.5 rounded-b-md text-[7px] font-black text-white uppercase text-center w-full truncate border-x border-b border-white/20">
+                   <div className={`bg-zinc-900 shadow-2xl px-2 py-0.5 rounded-b-md text-[7px] font-black uppercase text-center w-full truncate border-x border-b border-white/20 ${getQualityColor(eq.rarity)}`}>
                       {eq.name}
                    </div>
                 </div>

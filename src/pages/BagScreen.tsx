@@ -5,6 +5,7 @@ import { ChevronLeft, Trash2, CheckCircle2, Circle, Filter, SortDesc } from "luc
 import { useInventory, useMaterials, usePlayer, useDeleteEquipments, usePlayerCharacters } from "@/hooks/usePlayerData";
 import { EquipmentIcon } from "@/components/game/EquipmentIcon";
 import { toast } from "sonner";
+import { getEquipCP, getScaledEquipStats } from "@/stores/gameStore";
 
 export default function BagScreen() {
   const navigate = useNavigate();
@@ -22,15 +23,8 @@ export default function BagScreen() {
 
   const isLoading = invLoading || matsLoading;
 
-  // Helper: Calculate Combat Power for sorting
-  const getItemPower = (eq: any) => {
-    if (!eq || !eq.stats) return 0;
-    return (eq.stats.hp || 0) * 0.4 + 
-           (eq.stats.dmg || 0) * 10 + 
-           (eq.stats.armor || 0) * 2 + 
-           (eq.stats.speed || 0) * 25 + 
-           (eq.level || 0) * 100;
-  };
+  // Helper: Use global Combat Power calculation
+  const getItemPower = (eq: any) => getEquipCP(eq);
 
   // Identify equipped items
   const equippedIds = useMemo(() => {
@@ -310,13 +304,16 @@ export default function BagScreen() {
                 <div className="text-[9px] text-zinc-500 font-bold tracking-tighter uppercase font-mono">CP: {itemPower.toLocaleString()}</div>
               </div>
               
-              {eq.type !== 'material' && (
-                <div className="mt-3 text-[10px] flex flex-col gap-1 opacity-80 font-mono">
-                  {eq.stats?.hp > 0 && <span className="text-green-400">+{eq.stats.hp} HP</span>}
-                  {eq.stats?.dmg > 0 && <span className="text-red-400">+{eq.stats.dmg} DMG</span>}
-                  {eq.stats?.armor > 0 && <span className="text-blue-400">+{eq.stats.armor} DEF</span>}
-                </div>
-              )}
+              {eq.type !== 'material' && (() => {
+                const scaled = getScaledEquipStats(eq);
+                return (
+                  <div className="mt-3 text-[10px] flex flex-col gap-1 opacity-80 font-mono">
+                    {scaled.hp > 0 && <span className="text-green-400">+{scaled.hp.toLocaleString()} HP</span>}
+                    {scaled.dmg > 0 && <span className="text-red-400">+{scaled.dmg.toLocaleString()} DMG</span>}
+                    {scaled.armor > 0 && <span className="text-blue-400">+{scaled.armor.toLocaleString()} DEF</span>}
+                  </div>
+                );
+              })()}
             </div>
           );
         })}

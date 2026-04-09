@@ -259,3 +259,27 @@ export const STAR_BONUSES_MAP: Record<string, { stars: number, desc: string }[]>
     { stars: 6, desc: 'Kết Giới Flamme: Hồi Sinh toàn đội đã hy sinh (50% HP) + Chuyển hóa sát thương thành máu.' },
   ]
 };
+export function getScaledEquipStats(item: Equipment | any) {
+  if (!item || !item.stats) return {};
+  const level = item.level || 0;
+  const b = STAT_BONUS_TABLE[level] || 0;
+  
+  const stats: any = {};
+  Object.entries(item.stats).forEach(([key, val]) => {
+    if (val) {
+      const statKey = key as keyof typeof STAT_SCALE_FACTORS;
+      stats[key] = Math.floor((val as number) * (1 + b * STAT_SCALE_FACTORS[statKey]));
+    }
+  });
+  return stats;
+}
+
+export function getEquipCP(item: Equipment | any) {
+  if (!item) return 0;
+  const stats = getScaledEquipStats(item);
+  const hp = stats.hp || 0;
+  const dmg = stats.dmg || 0;
+  const armor = stats.armor || 0;
+  const speed = stats.speed || 0;
+  return Math.floor((hp * 0.4) + (dmg * 10) + (armor * 2) + (speed * 25));
+}
