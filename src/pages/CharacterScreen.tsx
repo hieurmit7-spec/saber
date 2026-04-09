@@ -73,7 +73,7 @@ export default function CharacterScreen() {
   };
 
   return (
-    <div className="w-full h-screen bg-[#050505] text-white relative font-sans overflow-hidden selection:bg-amber-500/30">
+    <div className="w-full h-screen bg-[#050505] text-white relative font-body overflow-hidden selection:bg-amber-500/30">
       {/* Dynamic Background */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(245,158,11,0.05),transparent_70%)]" />
@@ -87,7 +87,7 @@ export default function CharacterScreen() {
           <div className="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center group-hover:border-amber-500/50 group-hover:bg-amber-500/10">
             <ChevronLeft className="w-4 h-4" />
           </div>
-          <span className="text-[10px] font-black uppercase tracking-[0.3em]">Hành Trình</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.3em] font-display">Trở về</span>
         </button>
 
         <div className="flex items-center gap-4">
@@ -101,7 +101,7 @@ export default function CharacterScreen() {
         <div className="w-72 flex flex-col gap-2 border-r border-white/5 p-6 overflow-y-auto custom-scrollbar bg-black/20">
           <div className="flex items-center gap-2 mb-4 px-2">
             <div className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
-            <h2 className="text-[9px] text-zinc-500 uppercase font-black tracking-[0.4em]">Đội Hình Hiện Có</h2>
+            <h2 className="text-[9px] text-zinc-500 uppercase font-black tracking-[0.4em] font-display">Chiến tướng</h2>
           </div>
           {FULL_CHARACTERS.map(c => (
              <CharacterListItem 
@@ -163,7 +163,7 @@ export default function CharacterScreen() {
                    <div className="flex flex-col gap-16 pointer-events-auto">
                       <EquipSlot label="LINH KHÍ" item={activeChar.equipment.artifact} slot="artifact" onSelect={setShowEquipSelect} onUpgrade={setUpgradeTarget} activeCharId={activeChar.id} />
                       <EquipSlot label="NHẪN THẦN" item={activeChar.equipment.ring} slot="ring" onSelect={setShowEquipSelect} onUpgrade={setUpgradeTarget} activeCharId={activeChar.id} />
-                      <EquipSlot label="ĐAI LỖ" item={activeChar.equipment.belt} slot="belt" onSelect={setShowEquipSelect} onUpgrade={setUpgradeTarget} activeCharId={activeChar.id} />
+                      <EquipSlot label="ĐAI LƯNG" item={activeChar.equipment.belt} slot="belt" onSelect={setShowEquipSelect} onUpgrade={setUpgradeTarget} activeCharId={activeChar.id} />
                    </div>
                    <div className="flex flex-col gap-16 pointer-events-auto items-end">
                       <EquipSlot side="right" label="MŨ BẢO" item={activeChar.equipment.hat} slot="hat" onSelect={setShowEquipSelect} onUpgrade={setUpgradeTarget} activeCharId={activeChar.id} />
@@ -183,7 +183,7 @@ export default function CharacterScreen() {
                   <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/30">
                     <Sparkles className="w-4 h-4 text-amber-500" />
                   </div>
-                  <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.4em]">Đạo Pháp Cảnh Giới</span>
+                  <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.4em]">Cảnh Giới</span>
                 </div>
                 <div className={`text-xs font-black uppercase tracking-[0.2em] mb-1 ${realmStage.color}`}>{realmStage.label}</div>
                 <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-amber-200 to-amber-600 uppercase tracking-widest">{realmTitle}</div>
@@ -278,7 +278,7 @@ export default function CharacterScreen() {
                       onClick={() => upgradeLevelMutation.mutate({ characterId: activeChar.id, newLevel: activeChar.level + 1, cost: levelCost })}
                       className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-20 text-black font-black uppercase tracking-widest py-5 rounded-2xl transition-all shadow-xl active:scale-[0.98]"
                     >
-                      {upgradeLevelMutation.isPending ? 'NÂNG CẤP...' : `Thăng Cấp (${levelCost.toLocaleString()})`}
+                       {upgradeLevelMutation.isPending ? 'ĐANG TÔI LUYỆN...' : `Tu Vi (${levelCost.toLocaleString()})`}
                     </button>
                                          <div className="grid grid-cols-2 gap-3">
                         {lvX10 > 1 && (
@@ -328,7 +328,7 @@ export default function CharacterScreen() {
 
               {/* Star Bonuses Display */}
               <div className="mt-8">
-                 <div className="text-[8px] font-black text-zinc-600 uppercase tracking-widest border-b border-white/5 pb-2 mb-3">Mô Tả Đột Phá Bậc Sẹo</div>
+                 <div className="text-[8px] font-black text-zinc-600 uppercase tracking-widest border-b border-white/5 pb-2 mb-3">Mô Tả Đột Phá Bậc Sao</div>
                  <div className="max-h-40 overflow-y-auto custom-scrollbar pr-2 space-y-2">
                     {(STAR_BONUSES_MAP[activeChar.id] || []).map(b => (
                        <div key={b.stars} className={`flex gap-3 text-[10px] transition-all ${activeChar.stars >= b.stars ? 'text-zinc-200' : 'text-zinc-700'}`}>
@@ -360,7 +360,7 @@ function CharacterListItem({ char, isActive, onClick }: any) {
     >
       <div className="flex flex-col gap-1 relative z-10">
         <span className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-black/60' : 'text-zinc-500'}`}>{char.id}</span>
-        <span className={`text-sm font-black uppercase tracking-tight ${isActive ? 'text-black' : 'text-zinc-200'}`}>{char.name}</span>
+         <span className={`text-sm font-black uppercase tracking-tight font-display ${isActive ? 'text-black' : 'text-zinc-200'}`}>{char.name}</span>
       </div>
       {!char.isUnlocked && (
         <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center">
@@ -375,7 +375,7 @@ function ResourceBadge({ icon, label, value, color }: any) {
   return (
     <div className="bg-zinc-950/80 border border-white/5 px-4 py-2 rounded-xl flex items-center gap-3 shadow-xl">
        {icon ? <img src={icon} className="w-4 h-4 object-contain" alt="Icon" /> : <div className={`w-4 h-4 rounded-full flex items-center justify-center text-black text-[7px] font-black bg-${color}-500 shadow-[0_0_10px_rgba(var(--${color}),0.5)]`}>{label}</div>}
-       <span className={`text-sm font-black tabular-nums ${color === 'amber' ? 'text-amber-500' : 'text-blue-400'}`}>{value.toLocaleString()}</span>
+        <span className={`text-sm font-black tabular-nums font-display ${color === 'amber' ? 'text-amber-500' : 'text-blue-400'}`}>{value.toLocaleString()}</span>
     </div>
   );
 }
@@ -410,10 +410,10 @@ function ModernStat({ icon, label, val, base }: any) {
           <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">{icon}</div>
           <span className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">{label}</span>
        </div>
-       <div className="text-right">
-          <span className="text-lg font-black italic">{val.toLocaleString()}</span>
-          {bonus > 0 && <span className="text-[10px] text-green-500 ml-2 font-black">+{bonus.toLocaleString()}</span>}
-       </div>
+        <div className="text-right font-display">
+           <span className="text-xl font-black italic">{val.toLocaleString()}</span>
+           {bonus > 0 && <span className="text-[10px] text-green-500 ml-2 font-black">+{bonus.toLocaleString()}</span>}
+        </div>
     </div>
   );
 }
@@ -493,7 +493,7 @@ function BreakthroughModal({ activeChar, player, materials, onClose, mutation, r
     <div className="absolute inset-0 bg-black/95 backdrop-blur-3xl flex items-center justify-center z-[110] animate-in fade-in duration-500">
       <div className="w-[500px] bg-zinc-950 border border-amber-500/20 p-10 rounded-[40px] text-center shadow-[0_0_100px_rgba(245,158,11,0.1)] relative overflow-hidden">
         <Sparkles className="w-16 h-16 text-amber-400 mx-auto mb-6 animate-pulse" />
-        <h3 className="text-3xl font-black text-white uppercase mb-2 tracking-tighter">PHÁ GIỚI TIÊN MA</h3>
+        <h3 className="text-3xl font-black text-white uppercase mb-2 tracking-tighter font-display">PHÁ GIỚI TIÊN MA</h3>
         <p className="text-zinc-500 text-[10px] uppercase tracking-widest mb-12">Từ {realmTitle} tới {nextRealm.name}</p>
         
         <div className="grid grid-cols-2 gap-4 mb-10">
@@ -578,14 +578,14 @@ function EquipSelectDialog({ activeChar, FULL_CHARACTERS, item: select, onSelect
              <div className="w-1.5 h-12 bg-amber-500 rounded-full" />
              <div className="flex flex-col">
                <span className="text-[10px] font-black uppercase text-zinc-500 tracking-[1em] mb-1 leading-none opacity-50">Equipment Inventory</span>
-               <h3 className="text-4xl font-black uppercase text-white leading-none tracking-tighter italic">
-                 {select.slot?.toUpperCase()} <span className="text-amber-500/80">• TRANG PHỤC</span>
+               <h3 className="text-4xl font-black uppercase text-white leading-none tracking-tighter italic font-display">
+                 {select.slot?.toUpperCase()} <span className="text-amber-500/80">• PHÁP BẢO</span>
                </h3>
              </div>
           </div>
           <button onClick={onClose} className="group relative px-10 py-3 overflow-hidden rounded-2xl transition-all">
              <div className="absolute inset-0 bg-white/5 group-hover:bg-amber-500/10 border border-white/10 group-hover:border-amber-500/50 transition-all" />
-             <span className="relative z-10 text-zinc-500 group-hover:text-white uppercase font-black text-[11px] tracking-[0.3em]">Hồi Quy</span>
+             <span className="relative z-10 text-zinc-500 group-hover:text-white uppercase font-black text-[11px] font-display tracking-[0.3em]">Hồi Quy</span>
           </button>
         </div>
 
