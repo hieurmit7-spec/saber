@@ -174,7 +174,7 @@ export function getCharacterTotalStats(char: GameCharacter) {
   const eq = char.equipment;
   const gearBonus = { hp: 0, speed: 0, armor: 0, dmg: 0 };
   
-  // 1. Calculate Equipment Bonus (Additive, does not scale character base multipliers)
+  // 1. Calculate Equipment Bonus
   Object.entries(eq).forEach(([slot, item]) => {
     if (item) {
       const level = item.level || 0;
@@ -182,7 +182,6 @@ export function getCharacterTotalStats(char: GameCharacter) {
 
       const calcScaling = (baseStatValue: number | undefined, statKey: keyof typeof STAT_SCALE_FACTORS) => {
         if (!baseStatValue) return 0;
-        // Equipment itself scales with its own level bonus
         return baseStatValue * (1 + b * STAT_SCALE_FACTORS[statKey]);
       };
 
@@ -193,24 +192,32 @@ export function getCharacterTotalStats(char: GameCharacter) {
     }
   });
 
-  // 2. Character Base Multipliers
-  // Level scaling: Increased to +10% per level as requested
-  const levelMult = 1 + (char.level - 1) * 0.10;
+  // 2. Character Scaling logic (Tân thủ -> Tiên Đế)
+  const lv = Math.max(0, char.level - 1);
   
-  // Breakthrough scaling: Increase % of ALL stats
-  // Each Realm Rank (Đột phá cảnh giới) +15% total base power
-  // Each Star level (Tiến hóa sao) +5% total base power
-  const breakthroughMult = 1 + (char.realm_rank * 0.15) + (char.stars * 0.05);
+  // Level Bonuses (Additive fixed amounts per level)
+  // HP scale is set high to ensure long-term combat duration
+  const levelBonus = {
+    hp: lv * 100,    // +100 HP per level
+    dmg: lv * 5,     // +5 DMG per level
+    armor: lv * 10,   // +10 Armor per level
+    speed: 0         // Speed doesn't increase with basic level
+  };
 
-  const totalMult = levelMult * breakthroughMult;
-  
-  // Final Stat Formula: (Base * Multipliers) + Gear
-  const totalHp = (char.baseStats.hp * totalMult) + gearBonus.hp;
-  const totalDmg = (char.baseStats.dmg * totalMult) + gearBonus.dmg;
-  const totalArmor = (char.baseStats.armor * totalMult) + gearBonus.armor;
-  const totalSpeed = (char.baseStats.speed * breakthroughMult) + gearBonus.speed; // Speed only scales with breakthrough
+  // Breakthrough Multipliers (Percentage based scaling from Realm Rank and Stars)
+  // HP has higher coefficients (20% per Realm, 10% per Star) to prioritize survival
+  const btMultHp = 1 + (char.realm_rank * 0.20) + (char.stars * 0.10);
+  const btMultDmg = 1 + (char.realm_rank * 0.10) + (char.stars * 0.04);
+  const btMultArmor = 1 + (char.realm_rank * 0.15) + (char.stars * 0.06);
+  const btMultSpeed = 1 + (char.realm_rank * 0.05) + (char.stars * 0.02);
 
-  // 3. Character-Specific Final Multipliers (e.g., Peter's Passive)
+  // Final Stat Formula: (Base + LevelBonus) * BreakthroughMultiplier + Gear
+  const totalHp = ((char.baseStats.hp + levelBonus.hp) * btMultHp) + gearBonus.hp;
+  const totalDmg = ((char.baseStats.dmg + levelBonus.dmg) * btMultDmg) + gearBonus.dmg;
+  const totalArmor = ((char.baseStats.armor + levelBonus.armor) * btMultArmor) + gearBonus.armor;
+  const totalSpeed = (char.baseStats.speed * btMultSpeed) + gearBonus.speed;
+
+  // 3. Character-Specific Final Multipliers (e.g., Peter's Passive at 4 stars)
   const hpMultiplier = char.id === 'peter' && char.stars >= 4 ? 1.3 : 1;
   const armorMultiplier = char.id === 'peter' && char.stars >= 4 ? 1.2 : 1;
 

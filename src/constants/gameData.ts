@@ -9,7 +9,7 @@ export const SABER: GameCharacter = {
   level: 1,
   realm_rank: 0,
   exp: 0,
-  baseStats: { hp: 900, speed: 70, armor: 1100, dmg: 210 },
+  baseStats: { hp: 3200, speed: 70, armor: 1100, dmg: 160 },
   equipment: { shoes: null, hat: null, armor: null, ring: null, belt: null, artifact: null },
   skills: [
     { id: 1, name: 'Strike Air', description: 'Active: Gây 200 sát thương. Slash trail VFX.\n[Hồi chiêu: 1 lượt]', cooldown: 1, type: 'active' },
@@ -30,7 +30,7 @@ export const SASUKE: GameCharacter = {
   level: 1,
   realm_rank: 0,
   exp: 0,
-  baseStats: { hp: 800, speed: 100, armor: 800, dmg: 250 },
+  baseStats: { hp: 2900, speed: 100, armor: 800, dmg: 210 },
   equipment: { shoes: null, hat: null, armor: null, ring: null, belt: null, artifact: null },
   skills: [
     {
@@ -68,7 +68,7 @@ export const PETER: GameCharacter = {
   level: 1,
   realm_rank: 0,
   exp: 0,
-  baseStats: { hp: 1100, speed: 65, armor: 1200, dmg: 180 },
+  baseStats: { hp: 3600, speed: 65, armor: 1200, dmg: 110 },
   equipment: { shoes: null, hat: null, armor: null, ring: null, belt: null, artifact: null },
   skills: [
     {
@@ -106,7 +106,7 @@ export const GOJO: GameCharacter = {
   level: 1,
   realm_rank: 0,
   exp: 0,
-  baseStats: { hp: 700, speed: 120, armor: 1300, dmg: 220 },
+  baseStats: { hp: 2800, speed: 120, armor: 600, dmg: 220 },
   equipment: { shoes: null, hat: null, armor: null, ring: null, belt: null, artifact: null },
   skills: [
     {
@@ -144,7 +144,7 @@ export const FRIEREN: GameCharacter = {
   level: 1,
   realm_rank: 0,
   exp: 0,
-  baseStats: { hp: 800, speed: 95, armor: 600, dmg: 100 },
+  baseStats: { hp: 3500, speed: 110, armor: 900, dmg: 100 },
   equipment: { shoes: null, hat: null, armor: null, ring: null, belt: null, artifact: null },
   skills: [
     {

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Raleway:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant:wght@400;600;700;900&family=Raleway:wght@300;400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -45,7 +45,7 @@
     --dark-surface: 228 18% 10%;
     --overlay: 228 20% 6%;
 
-    --font-display: 'Cinzel', serif;
+    --font-display: 'Cormorant', serif;
     --font-body: 'Raleway', sans-serif;
 
     --sidebar-background: 228 18% 10%;

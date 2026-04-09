@@ -11,7 +11,6 @@ import {
   getRealmTitle, 
   getRealmStage, 
   getLevelCap,
-  getRequiredExp,
   REALM_DATA,
   STAT_BONUS_TABLE,
   STAT_SCALE_FACTORS,
@@ -194,7 +193,7 @@ export default function CharacterScreen() {
                     onClick={() => setShowBreakthroughModal(true)}
                     className="mt-6 w-full py-3 bg-amber-500 hover:bg-amber-400 text-black font-black uppercase text-[10px] tracking-[0.3em] rounded-xl transition-all animate-pulse active:scale-95 shadow-[0_0_20px_rgba(245,158,11,0.3)]"
                   >
-                    PHÁ QUYẾT ĐẦU CƠ
+                    Nghịch Thiên Cải Mệnh
                   </button>
                 )}
              </div>
@@ -242,44 +241,65 @@ export default function CharacterScreen() {
                  </div>
               </div>
 
-              {/* EXP Progress */}
-              <div className="space-y-1.5">
-                 <div className="flex justify-between text-[8px] font-black tracking-widest uppercase text-zinc-500">
-                    <span>Exp Tiến Trình</span>
-                    <span>{Math.round((activeChar.exp / getRequiredExp(activeChar.level)) * 100)}%</span>
-                 </div>
-                 <div className="w-full h-1.5 bg-black rounded-full overflow-hidden border border-white/5">
-                    <div className="h-full bg-gradient-to-r from-amber-600 to-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.5)] transition-all duration-1000" style={{ width: `${Math.min(100, (activeChar.exp / getRequiredExp(activeChar.level)) * 100)}%` }} />
-                 </div>
-              </div>
+
            </div>
 
            {/* Core Growth Buttons */}
            <div className="flex flex-col gap-3">
               {(() => {
-                const levelCost = Math.floor(Math.pow(activeChar.level, 1.2) * 800 + 500);
-                const lvX10 = Math.min(10, levelCap - activeChar.level);
-                let totalX10 = 0;
-                for (let i = 0; i < lvX10; i++) totalX10 += Math.floor(Math.pow(activeChar.level + i, 1.2) * 800 + 500);
+                 const currentCoins = player?.coins || 0;
+                 const levelCost = Math.floor(Math.pow(activeChar.level, 1.2) * 800 + 500);
+                 
+                 // Calculate x10
+                 const lvX10 = Math.min(10, levelCap - activeChar.level);
+                 let totalX10 = 0;
+                 if (lvX10 > 0) {
+                   for (let i = 0; i < lvX10; i++) totalX10 += Math.floor(Math.pow(activeChar.level + i, 1.2) * 800 + 500);
+                 }
+
+                 // Calculate Quick Upgrade (Max possible)
+                 let totalQuick = 0;
+                 let levelsQuick = 0;
+                 const maxAvailable = levelCap - activeChar.level;
+                 for (let i = 0; i < maxAvailable; i++) {
+                   const cost = Math.floor(Math.pow(activeChar.level + i, 1.2) * 800 + 500);
+                   if (totalQuick + cost <= currentCoins) {
+                     totalQuick += cost;
+                     levelsQuick++;
+                   } else {
+                     break;
+                   }
+                 }
                 
                 return (
                   <div className="space-y-3">
                     <button 
-                      disabled={activeChar.level >= levelCap || (player?.coins || 0) < levelCost || upgradeLevelMutation.isPending || !activeChar.isUnlocked}
+                      disabled={activeChar.level >= levelCap || currentCoins < levelCost || upgradeLevelMutation.isPending || !activeChar.isUnlocked}
                       onClick={() => upgradeLevelMutation.mutate({ characterId: activeChar.id, newLevel: activeChar.level + 1, cost: levelCost })}
                       className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-20 text-black font-black uppercase tracking-widest py-5 rounded-2xl transition-all shadow-xl active:scale-[0.98]"
                     >
                       {upgradeLevelMutation.isPending ? 'NÂNG CẤP...' : `Thăng Cấp (${levelCost.toLocaleString()})`}
                     </button>
-                    {lvX10 > 1 && (
-                       <button 
-                         disabled={(player?.coins || 0) < totalX10 || upgradeLevelMutation.isPending || !activeChar.isUnlocked}
-                         onClick={() => upgradeLevelMutation.mutate({ characterId: activeChar.id, newLevel: activeChar.level + lvX10, cost: totalX10 })}
-                         className="w-full bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-10 text-white font-black uppercase tracking-widest py-3 text-[10px] rounded-xl transition-all"
-                       >
-                         Thăng Cấp x{lvX10} ({totalX10.toLocaleString()})
-                       </button>
-                    )}
+                                         <div className="grid grid-cols-2 gap-3">
+                        {lvX10 > 1 && (
+                           <button 
+                             disabled={currentCoins < totalX10 || upgradeLevelMutation.isPending || !activeChar.isUnlocked}
+                             onClick={() => upgradeLevelMutation.mutate({ characterId: activeChar.id, newLevel: activeChar.level + lvX10, cost: totalX10 })}
+                             className="bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-10 text-white font-black uppercase tracking-widest py-3 text-[9px] rounded-xl transition-all"
+                           >
+                             x{lvX10} ({totalX10.toLocaleString()})
+                           </button>
+                        )}
+                        {levelsQuick > 0 && levelsQuick !== lvX10 && (
+                           <button 
+                             disabled={upgradeLevelMutation.isPending || !activeChar.isUnlocked}
+                             onClick={() => upgradeLevelMutation.mutate({ characterId: activeChar.id, newLevel: activeChar.level + levelsQuick, cost: totalQuick })}
+                             className="bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 text-amber-500 font-black uppercase tracking-widest py-3 text-[9px] rounded-xl transition-all border-dashed"
+                           >
+                             MAX +{levelsQuick} ({totalQuick.toLocaleString()})
+                           </button>
+                        )}
+                     </div>
                   </div>
                 );
               })()}
