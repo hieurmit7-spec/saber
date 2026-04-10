@@ -74,7 +74,7 @@ export default function ShopScreen() {
             </Button>
             <div className="flex flex-col items-center">
               <h1 className="text-5xl font-black italic tracking-[0.2em] uppercase text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-500">
-                TIỆM TỔNG HỢP
+                CHỢ ĐEN
               </h1>
               <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-bold uppercase tracking-[0.4em] mt-2">
                 <ShoppingCart className="w-3 h-3" /> Chợ đen liên giới - Cập nhật mỗi ngày
@@ -157,7 +157,7 @@ export default function ShopScreen() {
           <div className="mt-auto bg-blue-900/10 border border-blue-500/20 p-4 flex items-center gap-4 animate-pulse">
              <ShieldAlert className="w-6 h-6 text-blue-400" />
              <p className="text-[10px] text-blue-300 font-bold uppercase tracking-widest">
-               Lưu ý: Vật phẩm trong Tiệm Tổng Hợp được làm mới vào lúc 00:00 mỗi ngày. Hãy tranh thủ mua sắm trước khi hết hạn!
+               Lưu ý: Vật phẩm trong CHỢ ĐEN được làm mới vào lúc 00:00 mỗi ngày. Hãy tranh thủ mua sắm trước khi hết hạn!
              </p>
           </div>
        </div>

@@ -296,7 +296,7 @@ export default function CharacterScreen() {
                              onClick={() => upgradeLevelMutation.mutate({ characterId: activeChar.id, newLevel: activeChar.level + levelsQuick, cost: totalQuick })}
                              className="bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 text-amber-500 font-black uppercase tracking-widest py-3 text-[9px] rounded-xl transition-all border-dashed"
                            >
-                             MAX +{levelsQuick} ({totalQuick.toLocaleString()})
+                             Nâng nhanh {levelsQuick} level ({totalQuick.toLocaleString()})
                            </button>
                         )}
                      </div>
